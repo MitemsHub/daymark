@@ -214,6 +214,31 @@ all routes are static. The app is fully client-side for data: the localStorage
 override travels with the browser, so set repo defaults in `/data` before
 deploying if reference data changes.
 
+### GitHub Pages
+
+The repo deploys to Pages by itself. On every push to `main`, a GitHub Actions
+workflow runs the tests, builds a static export and publishes it. Nothing to
+configure once Pages is on: the live site is
+[https://mitemshub.github.io/daymark/](https://mitemshub.github.io/daymark/).
+
+The Pages build differs from a normal build in two ways: every URL carries the
+`/daymark` base path (Pages serves project sites from a subfolder), and the
+output is plain static files in `out/`. That lives in one script, so local
+work stays untouched:
+
+```bash
+npm run build:pages   # static export with the /daymark prefix, writes out/
+```
+
+`npm run build` and `npm run dev` remain a normal Next.js build with no
+prefix, which is what Vercel and `npm start` expect. The manifest, service
+worker and sitemap read the base path from the build, so one script covers
+both targets.
+
+If you rename the repository, change `/daymark` in two places: the
+`build:pages` script in `package.json` and the sitemap URL in `app/sitemap.ts`.
+GitHub Actions picks the rest up from the script.
+
 ---
 
 ## Project structure

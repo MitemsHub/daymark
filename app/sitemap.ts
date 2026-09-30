@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
 
+export const dynamic = "force-static";
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = "https://daymark.mitemshub.com";
+  const base = "https://mitemshub.github.io/daymark";
   const routes = ["", "/week", "/investments", "/grades"];
   return routes.map((r) => ({
     url: `${base}${r}`,

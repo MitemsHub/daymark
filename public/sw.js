@@ -8,10 +8,21 @@
 //     background (stale-while-revalidate).
 //   - everything else: network only.
 //
+// The base path is derived from the registration scope, so the same file
+// works at the site root and under /daymark on GitHub Pages.
+//
 // Bump CACHE_VERSION whenever the shell changes shape.
 
-const CACHE_VERSION = "daymark-v1";
-const SHELL = ["/", "/week", "/icon.svg", "/icon-192.png", "/icon-512.png", "/manifest.webmanifest"];
+const CACHE_VERSION = "daymark-v2";
+const BASE = new URL(self.registration.scope).pathname.replace(/\/$/, "");
+const SHELL = [
+  `${BASE}/`,
+  `${BASE}/week`,
+  `${BASE}/icon.svg`,
+  `${BASE}/icon-192.png`,
+  `${BASE}/icon-512.png`,
+  `${BASE}/manifest.webmanifest`,
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -50,14 +61,15 @@ self.addEventListener("fetch", (event) => {
         .catch(() =>
           caches
             .match(request)
-            .then((hit) => hit || caches.match("/"))
+            .then((hit) => hit || caches.match(`${BASE}/`))
         ),
     );
     return;
   }
 
   // Same-origin static assets: cache first, refresh behind the response.
-  if (url.pathname.startsWith("/_next/") || url.pathname.match(/\.(png|svg|ico|woff2?|css|js)$/)) {
+  const path = url.pathname.startsWith(BASE) ? url.pathname.slice(BASE.length) : url.pathname;
+  if (path.startsWith("/_next/") || path.match(/\.(png|svg|ico|woff2?|css|js)$/)) {
     event.respondWith(
       caches.match(request).then((hit) => {
         const refresh = fetch(request)
