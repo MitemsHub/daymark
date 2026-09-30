@@ -18,6 +18,7 @@ export function Callover() {
   const [data, setData] = useState<CallOverData | null>(null);
   const [threshold, setThreshold] = useState(DEFAULT_CHARGE_THRESHOLD);
   const [result, setResult] = useState<CallOverResult | null>(null);
+  const [running, setRunning] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   // Restore a previous session if one exists.
@@ -68,9 +69,17 @@ export function Callover() {
   );
 
   const run = useCallback(() => {
-    if (!data) return;
-    setResult(runCallOver(data.payments, data.statement, threshold));
-  }, [data, threshold]);
+    if (!data || running) return;
+    setRunning(true);
+    // A beat of matching animation so short runs are still visible.
+    const work = new Promise<CallOverResult>((resolve) => {
+      setTimeout(() => resolve(runCallOver(data.payments, data.statement, threshold)), 700);
+    });
+    work.then((r) => {
+      setResult(r);
+      setRunning(false);
+    });
+  }, [data, threshold, running]);
 
   const reset = useCallback(() => {
     setData(null);
@@ -84,13 +93,8 @@ export function Callover() {
         Call over
       </h1>
 
-      <div className="flex flex-wrap items-baseline justify-between gap-3 mb-4 print:hidden">
-        <p className="text-sm text-ink-soft max-w-prose">
-          Upload the statement and the payment list. Every payment is checked against the statement and
-          classified: paid, reversed, double posted, partial, or not found. Reference matching follows the
-          call-over rule: ZB/A/006570/5 matches ZBA0065705 but never ZBA00657050.
-        </p>
-        {!result && (
+      {!result && (
+        <div className="flex justify-end mb-4 print:hidden">
           <label className="text-sm text-ink-soft whitespace-nowrap">
             Charge threshold{" "}
             <input
@@ -102,8 +106,8 @@ export function Callover() {
               className="tnum border hairline bg-white rounded-sm px-2 py-1.5 w-28 ml-1"
             />
           </label>
-        )}
-      </div>
+        </div>
+      )}
 
       {!result && (
         <div className="mb-6">
@@ -111,10 +115,18 @@ export function Callover() {
           <button
             type="button"
             onClick={run}
-            disabled={!data || data.statement.length === 0 || data.payments.length === 0}
-            className="mt-4 text-sm px-4 py-2.5 rounded-sm font-semibold border border-stamp bg-stamp text-white hover:bg-stamp-deep disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            disabled={!data || data.statement.length === 0 || data.payments.length === 0 || running}
+            className="mt-4 w-full sm:w-auto text-sm px-6 py-2.5 rounded-sm font-semibold border border-stamp bg-stamp text-white hover:bg-stamp-deep disabled:opacity-50 disabled:cursor-not-allowed transition-colors relative overflow-hidden"
           >
-            Run call-over
+            {running && data ? (
+              <span className="inline-flex items-center gap-2.5">
+                <span className="spinner" aria-hidden="true" />
+                Matching {data.payments.length.toLocaleString()} payments against {data.statement.length.toLocaleString()} lines
+                <span className="dots" aria-hidden="true" />
+              </span>
+            ) : (
+              "Run call-over"
+            )}
           </button>
         </div>
       )}

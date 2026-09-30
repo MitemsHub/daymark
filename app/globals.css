@@ -427,6 +427,33 @@ table.ledger {
     background: white !important;
   }
 
+  /* Kill every animation at print time: a print during the entrance
+     reveal must still show all content, not a half-faded page. */
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .reveal,
+  .reveal.delay-1,
+  .reveal.delay-2,
+  .reveal.delay-3,
+  .stamp-in,
+  .swap-in,
+  .ledger tbody tr {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+
+  /* Anything screen-collapsed prints expanded (Tailwind's print:block
+     utilities do the precise work; this is the safety net). */
+  .hidden.print\:block {
+    display: block !important;
+  }
+
   /* App chrome that never prints. */
   nav,
   footer,
@@ -459,5 +486,45 @@ table.ledger {
 
   thead {
     display: table-header-group;
+  }
+}
+
+/* ---- Call Over: run animation ------------------------------------------
+   A working spinner and animated ellipsis while the matching runs. Both are
+   disabled by the global reduced-motion override. */
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: dm-spin 0.7s linear infinite;
+  flex: none;
+}
+
+@keyframes dm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.dots::after {
+  content: "";
+  animation: dm-dots 1.2s steps(4, end) infinite;
+}
+
+@keyframes dm-dots {
+  0% {
+    content: "";
+  }
+  25% {
+    content: ".";
+  }
+  50% {
+    content: "..";
+  }
+  75% {
+    content: "...";
   }
 }
