@@ -26,6 +26,8 @@ export interface StatementLine {
   isReversal: boolean;
   /** the bank's own Reference column value, normalized (GTB style); "" if none */
   refField: string;
+  /** which uploaded statement file this line came from */
+  source?: string;
 }
 
 export interface PaymentRow {
@@ -96,6 +98,41 @@ export interface CallOverResult {
   /** statement debits no payment accounts for */
   unexplainedDebits: StatementLine[];
   totals: CallOverTotals;
+  /** per statement file: which bank it looks like, line and debit counts */
+  banks: BankSummary[];
+}
+
+/** A quick, honest label for the bank a statement file came from. */
+export interface BankSummary {
+  file: string;
+  bank: string;
+  lines: number;
+  debits: number;
+  credits: number;
+  debitTotal: number;
+  creditTotal: number;
+  dateSpan: string;
+}
+
+/**
+ * Identify the bank from tell-tale narration and reference shapes. This is
+ * a label for the report, not a matching rule; matching stays bank-agnostic.
+ */
+export function detectBank(lines: StatementLine[]): string {
+  const joined = lines.slice(0, 400).map((l) => l.narration).join(" \n ");
+  if (/Zenith|ZBA\d{7}|ZB\/A\//i.test(joined)) return "Zenith Bank";
+  if (/GTWORLD|GUARANTY/i.test(joined)) return "Guaranty Trust Bank";
+  if (/FIDELITY/i.test(joined)) return "Fidelity Bank";
+  if (/ACCESS/i.test(joined)) return "Access Bank";
+  if (/UBA\b|\bUBN\b/i.test(joined)) return "UBA";
+  if (/FIRST BANK|\bFBN\b/i.test(joined)) return "First Bank";
+  if (/ECOBANK/i.test(joined)) return "Ecobank";
+  if (/STERLING/i.test(joined)) return "Sterling Bank";
+  if (/UNION BANK/i.test(joined)) return "Union Bank";
+  if (/WEMA/i.test(joined)) return "Wema Bank";
+  if (/STANBIC/i.test(joined)) return "Stanbic IBTC";
+  if (/POLARIS/i.test(joined)) return "Polaris Bank";
+  return "Unrecognized bank";
 }
 
 /** Characters stripped when normalizing references and narrations. */
@@ -185,7 +222,7 @@ export function isReversalNarration(narration: string): boolean {
 }
 
 export function toStatementLine(id: number, raw: {
-  date?: unknown; narration?: unknown; debit?: unknown; credit?: unknown; refField?: unknown;
+  date?: unknown; narration?: unknown; debit?: unknown; credit?: unknown; refField?: unknown; source?: unknown;
 }): StatementLine {
   const narration = String(raw.narration ?? "").trim();
   return {
@@ -198,6 +235,7 @@ export function toStatementLine(id: number, raw: {
     isChargeLine: isChargeNarration(narration),
     isReversal: isReversalNarration(narration),
     refField: normalizeRef(String(raw.refField ?? "")),
+    source: String(raw.source ?? "").trim(),
   };
 }
 
@@ -465,5 +503,26 @@ export function runCallOver(
     if (cross) v.note = v.note ? `${v.note} ${cross}` : cross;
   }
 
-  return { verdicts, unexplainedDebits, totals };
+  // One summary per uploaded statement file that produced lines.
+  const byFile = new Map<string, StatementLine[]>();
+  for (const l of lines) {
+    const key = l.source || "statement";
+    if (!byFile.has(key)) byFile.set(key, []);
+    byFile.get(key)!.push(l);
+  }
+  const banks: BankSummary[] = [...byFile.entries()].map(([file, ls]) => ({
+    file,
+    bank: detectBank(ls),
+    lines: ls.length,
+    debits: ls.filter((l) => l.debit > 0).length,
+    credits: ls.filter((l) => l.credit > 0).length,
+    debitTotal: ls.reduce((s, l) => s + l.debit, 0),
+    creditTotal: ls.reduce((s, l) => s + l.credit, 0),
+    dateSpan: (() => {
+      const dates = ls.map((l) => l.dateISO).filter(Boolean).sort();
+      return dates.length > 0 ? (dates[0] === dates[dates.length - 1] ? dates[0] : `${dates[0]} to ${dates[dates.length - 1]}`) : "";
+    })(),
+  }));
+
+  return { verdicts, unexplainedDebits, totals, banks };
 }

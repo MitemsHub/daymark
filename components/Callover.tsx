@@ -197,7 +197,15 @@ export function Callover() {
       )}
 
       {result && data && (
-        <CalloverResults result={result} statementName={data.statementName} paymentsName={data.paymentsName} onReset={wipe} onPrint={print} />
+        <CalloverResults
+          result={result}
+          statementName={data.statementName}
+          paymentsName={data.paymentsName}
+          onReset={wipe}
+          onPrint={print}
+          onClearNow={wipe}
+          expiresAt={expiresAt}
+        />
       )}
 
       {minutesLeft !== null && (

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { CallOverResult, PaymentVerdict, CallOverStatus } from "@/lib/callover";
+import { downloadCsv } from "@/lib/csvExport";
 
 const STATUS_ORDER: CallOverStatus[] = [
   "Double posted",
@@ -104,15 +105,37 @@ export function CalloverResults({
   paymentsName,
   onReset,
   onPrint,
+  onClearNow,
+  expiresAt,
 }: {
   result: CallOverResult;
   statementName: string;
   paymentsName: string;
   onReset: () => void;
   onPrint: () => void;
+  onClearNow: () => void;
+  expiresAt: number | null;
 }) {
   const [showPaid, setShowPaid] = useState(false);
   const [query, setQuery] = useState("");
+  const [now, setNow] = useState(() => Date.now());
+
+  // Tick the countdown badge once a second while results are on screen.
+  useEffect(() => {
+    if (expiresAt === null) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [expiresAt]);
+
+  const msLeft = expiresAt !== null ? expiresAt - now : null;
+  const badge = (() => {
+    if (msLeft === null) return null;
+    const clamped = Math.max(0, msLeft);
+    const mm = Math.floor(clamped / 60_000);
+    const ss = Math.floor((clamped % 60_000) / 1000);
+    const urgent = clamped <= 5 * 60_000;
+    return { text: `${mm}:${String(ss).padStart(2, "0")}`, urgent };
+  })();
 
   const { verdicts, unexplainedDebits, totals } = result;
 
@@ -145,6 +168,19 @@ export function CalloverResults({
 
       <div className="flex flex-wrap items-end justify-between gap-3 mb-4 print:hidden">
         <h2 className="eyebrow">Results</h2>
+        {badge && (
+          <span
+            role="timer"
+            aria-label={`Session clears in ${badge.text}`}
+            className={`tnum text-xs px-2 py-1 rounded-sm border ${
+              badge.urgent
+                ? "border-stamp bg-stamp-wash text-stamp font-semibold"
+                : "hairline text-ink-faint"
+            }`}
+          >
+            clears in {badge.text}
+          </span>
+        )}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <input
             type="search"
@@ -156,8 +192,22 @@ export function CalloverResults({
           <button type="button" onClick={onPrint} className="flex-1 sm:flex-none text-sm px-3 py-2 border border-stamp text-stamp rounded-sm hover:bg-stamp hover:text-white transition-colors font-semibold">
             Print report
           </button>
+          <button
+            type="button"
+            onClick={() => downloadCsv(result)}
+            className="flex-1 sm:flex-none text-sm px-3 py-2 border hairline text-ink rounded-sm hover:border-stamp hover:text-stamp transition-colors font-semibold"
+          >
+            Export CSV
+          </button>
           <button type="button" onClick={onReset} className="text-sm text-ink-soft hover:text-stamp px-2 py-2 transition-colors">
             New session
+          </button>
+          <button
+            type="button"
+            onClick={onClearNow}
+            className="text-sm text-stamp hover:text-stamp-deep px-2 py-2 transition-colors font-semibold"
+          >
+            Clear now
           </button>
         </div>
       </div>
@@ -171,6 +221,43 @@ export function CalloverResults({
         <Tile label="Short paid" value={totals.shortPaid} tone="text-ink" />
         <Tile label="Not found" value={totals.notFound} tone="text-stamp" />
       </div>
+
+      {/* Per-bank breakdown: appears when several statement files were merged */}
+      {result.banks && result.banks.length > 1 && (
+        <section aria-labelledby="banks-heading" className="mb-6">
+          <h3 id="banks-heading" className="eyebrow mb-2">
+            Statements in this run ({result.banks.length})
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="ledger ledger--compact">
+              <thead>
+                <tr>
+                  <th scope="col">File</th>
+                  <th scope="col">Bank</th>
+                  <th scope="col" className="!text-right">Lines</th>
+                  <th scope="col" className="!text-right">Debits</th>
+                  <th scope="col" className="!text-right">Credits</th>
+                  <th scope="col" className="!text-right">Debit total</th>
+                  <th scope="col">Dates</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.banks.map((b) => (
+                  <tr key={b.file}>
+                    <td className="text-xs whitespace-nowrap">{b.file}</td>
+                    <td className="whitespace-normal">{b.bank}</td>
+                    <td className="num">{b.lines.toLocaleString()}</td>
+                    <td className="num">{b.debits.toLocaleString()}</td>
+                    <td className="num">{b.credits.toLocaleString()}</td>
+                    <td className="num">{naira(b.debitTotal)}</td>
+                    <td className="text-xs whitespace-nowrap">{b.dateSpan}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* Unexplained debits */}
       {unexplainedDebits.length > 0 && (

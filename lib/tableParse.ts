@@ -112,8 +112,8 @@ export function findPaymentColumns(sheet: TableSheet): PaymentColumns | null {
   return { ref, beneficiary, amount, dueDate };
 }
 
-/** Pull statement lines from one sheet. */
-export function statementLinesFromSheet(sheet: TableSheet, cols: StatementColumns): StatementLine[] {
+/** Pull statement lines from one sheet, tagged with the file they came from. */
+export function statementLinesFromSheet(sheet: TableSheet, cols: StatementColumns, source = ""): StatementLine[] {
   const out: StatementLine[] = [];
   for (const r of sheet.rows) {
     const narration = String(r[cols.narration] ?? "").trim();
@@ -130,6 +130,7 @@ export function statementLinesFromSheet(sheet: TableSheet, cols: StatementColumn
       debit,
       credit,
       refField: refRaw.replace(/^'+/, ""), // GTB exports prefix with an apostrophe
+      source,
     }));
   }
   return out;

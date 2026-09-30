@@ -175,7 +175,7 @@ export function CalloverUploader({ onReady }: { onReady: (data: CallOverData) =>
                 const sheet = wb.sheets.find((s) => s.name === sheetName)!;
                 const cols = findStatementColumns(sheet);
                 if (!cols) continue;
-                const parsed = statementLinesFromSheet(sheet, cols);
+                const parsed = statementLinesFromSheet(sheet, cols, file.name);
                 if (parsed.length > 0) {
                   lines.push(...parsed.map((l) => ({ ...l, id: all.length + lines.length + l.id })));
                   parsedAny = true;
