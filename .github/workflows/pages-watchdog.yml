@@ -5,6 +5,14 @@ name: Pages watchdog
 # the real app. This watchdog checks the live site on a schedule, detects that
 # takeover, and republishes the site from the last successful build so the app
 # comes back without anyone logging in.
+#
+# Design rules:
+# - A transient failure (timeout, 5xx, rate limit) never triggers a
+#   republish. The check waits two minutes and tries again first.
+# - A real takeover (wrong title, 404) republishes, but a capped number of
+#   times per six hours. If the problem survives that, the run fails loudly
+#   for a human instead of looping all day.
+# - Every run writes a summary of what it saw to the run's Summary page.
 
 on:
   schedule:
@@ -18,32 +26,78 @@ concurrency:
   group: pages-watchdog
   cancel-in-progress: false
 
+env:
+  SITE_URL: https://mitemshub.github.io/daymark
+  # Update this when the app title changes; it is the takeover signal.
+  EXPECTED_TITLE: "Date &amp; Week Calculator"
+
 jobs:
   check:
     runs-on: ubuntu-latest
     outputs:
       taken_over: ${{ steps.detect.outputs.taken_over }}
+      kind: ${{ steps.detect.outputs.kind }}
+      http_code: ${{ steps.detect.outputs.http_code }}
+      title: ${{ steps.detect.outputs.title }}
+      callover_code: ${{ steps.detect.outputs.callover_code }}
     steps:
-      - name: Check the live site
+      - name: Detect what the live site is serving
         id: detect
         run: |
           set -euo pipefail
-          code=$(curl -s -o live.html -w "%{http_code}" -m 30 https://mitemshub.github.io/daymark/ || true)
-          echo "HTTP $code"
-          if [ "$code" != "200" ]; then
-            echo "taken_over=true" >> "$GITHUB_OUTPUT"
-            echo "reason=http_$code" >> "$GITHUB_OUTPUT"
-            exit 0
+          probe() {
+            http=$(curl -s -o live.html -w "%{http_code}" -m 30 "$SITE_URL/" || echo 000)
+            title=$(grep -o "<title>[^<]*</title>" live.html | head -1 || true)
+            callover=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "$SITE_URL/callover/" || echo 000)
+          }
+
+          # transient: network error, timeout or server-side trouble that a
+          # retry can fix. hard: the site is up but serving the wrong thing.
+          classify() {
+            if [ "$http" = "000" ] || [ "$callover" = "000" ]; then echo transient
+            elif [ "$http" != "200" ] && [ "$http" -ge 500 ]; then echo transient
+            elif [ "$http" = "429" ]; then echo transient
+            elif [ "$http" != "200" ]; then echo "hard_http_$http"
+            elif [ "$callover" != "200" ] && [ "$callover" -ge 500 ]; then echo transient
+            elif [ "$callover" != "200" ]; then echo "hard_callover_$callover"
+            elif [ "$title" != "$EXPECTED_TITLE" ]; then echo hard_title
+            else echo healthy
+            fi
+          }
+
+          probe
+          kind=$(classify)
+          if [ "$kind" = "transient" ]; then
+            echo "First probe looked transient; waiting two minutes and probing again."
+            sleep 120
+            probe
+            kind=$(classify)
+            if [ "$kind" = "transient" ]; then kind="transient_persistent"; fi
           fi
-          title=$(grep -o "<title>[^<]*</title>" live.html | head -1 || true)
-          echo "title: $title"
-          if printf '%s' "$title" | grep -q "Date &amp; Week Calculator"; then
-            echo "taken_over=false" >> "$GITHUB_OUTPUT"
-            echo "reason=ok" >> "$GITHUB_OUTPUT"
-          else
-            echo "taken_over=true" >> "$GITHUB_OUTPUT"
-            echo "reason=title_mismatch" >> "$GITHUB_OUTPUT"
-          fi
+
+          taken_over=false
+          case "$kind" in hard*) taken_over=true ;; esac
+
+          {
+            echo "taken_over=$taken_over"
+            echo "kind=$kind"
+            echo "http_code=$http"
+            echo "title=$title"
+            echo "callover_code=$callover"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Pages watchdog check"
+            echo ""
+            echo "| Signal | Value |"
+            echo "| --- | --- |"
+            echo "| Time (UTC) | $(date -u +%H:%M) |"
+            echo "| Home HTTP | $http |"
+            echo "| Home title | ${title:-none} |"
+            echo "| /callover/ HTTP | $callover |"
+            echo "| Verdict | $kind |"
+            echo "| Action | $( [ "$taken_over" = "true" ] && echo "republish" || echo "none" ) |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   republish:
     needs: check
@@ -54,8 +108,42 @@ jobs:
       pages: write
       id-token: write
     steps:
-      - name: Log the takeover
-        run: echo "Live site reports a Jekyll takeover (${{ needs.check.outputs.reason }}). Republishing."
+      - name: Report the takeover
+        run: |
+          {
+            echo "### Pages takeover detected"
+            echo ""
+            echo "Home HTTP: ${{ needs.check.outputs.http_code }}, title: \`${{ needs.check.outputs.title }}\`, /callover/: ${{ needs.check.outputs.callover_code }} (verdict \`${{ needs.check.outputs.kind }}\`)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Republish only if the last real deploy succeeded
+        # A republish cannot fix a failing build; fail loudly instead.
+        run: |
+          set -euo pipefail
+          read -r sha status conclusion < <(curl -s \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/deploy.yml/runs?per_page=1" \
+            | jq -r '.workflow_runs[0] | "\(.head_sha) \(.status) \(.conclusion // "none")"')
+          echo "last deploy: $sha $status $conclusion"
+          if [ "$status" != "completed" ] || [ "$conclusion" != "success" ]; then
+            echo "The last deploy.yml run is $status/$conclusion. Republishing would not help." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: Stop after four republishes in six hours
+        # A takeover that survives this many republishes needs a human.
+        run: |
+          set -euo pipefail
+          since=$(date -u -d '6 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+          count=$(curl -s \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/pages-watchdog.yml/runs?status=failure&per_page=30" \
+            | jq --arg since "$since" '[.workflow_runs[] | select(.created_at >= $since)] | length')
+          echo "watchdog failures in the last 6h: $count"
+          if [ "$count" -ge 4 ]; then
+            echo "Four watchdog runs failed in six hours. Handing the problem to a human." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       - name: Make the Pages source use GitHub Actions
         # The setting can only be flipped here because it needs the repo
@@ -68,7 +156,7 @@ jobs:
             "https://api.github.com/repos/${{ github.repository }}/pages" \
             -d '{"build_type":"workflow"}')
           echo "Pages build_type update HTTP $status"
-          [ "$status" = "204" ] || echo "warning: build_type update returned $status, continuing"
+          [ "$status" = "204" ] || { echo "build_type update returned $status" >> "$GITHUB_STEP_SUMMARY"; }
 
       - name: Dispatch the deploy workflow
         run: |
@@ -86,14 +174,14 @@ jobs:
           set -euo pipefail
           for i in $(seq 1 40); do
             sleep 30
-            run=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              "https://api.github.com/repos/${{ github.repository }}/actions/workflows/deploy.yml/runs?event=workflow_dispatch&per_page=1")
-            status=$(printf '%s' "$run" | grep -o '"status": *"[^"]*"' | head -1 | sed 's/.*"status": *"//;s/"//')
-            conclusion=$(printf '%s' "$run" | grep -o '"conclusion": *"[^"]*"' | head -1 | sed 's/.*"conclusion": *"//;s/"//')
+            read -r status conclusion < <(curl -s \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/workflows/deploy.yml/runs?event=workflow_dispatch&per_page=1" \
+              | jq -r '.workflow_runs[0] | "\(.status) \(.conclusion // "none")"')
             echo "attempt $i: status=$status conclusion=$conclusion"
             [ "$status" = "completed" ] && exit 0
           done
-          echo "Deploy did not finish in 20 minutes" >&2
+          echo "Deploy did not finish in 20 minutes" >> "$GITHUB_STEP_SUMMARY"
           exit 1
 
       - name: Verify the site came back
@@ -101,12 +189,12 @@ jobs:
           set -euo pipefail
           for i in $(seq 1 10); do
             sleep 15
-            title=$(curl -s -m 30 https://mitemshub.github.io/daymark/ | grep -o "<title>[^<]*</title>" | head -1 || true)
+            title=$(curl -s -m 30 "$SITE_URL/" | grep -o "<title>[^<]*</title>" | head -1 || true)
             echo "title: $title"
-            if printf '%s' "$title" | grep -q "Date &amp; Week Calculator"; then
-              echo "Site restored."
+            if [ "$title" = "$EXPECTED_TITLE" ]; then
+              echo "Site restored." >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
           done
-          echo "Site still not serving the app after the republish" >&2
+          echo "Site still not serving the app after the republish" >> "$GITHUB_STEP_SUMMARY"
           exit 1
