@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Archivo, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 
 const archivo = Archivo({
   subsets: ["latin"],
@@ -46,8 +47,19 @@ export const metadata: Metadata = {
     description:
       "Inclusive/exclusive day counts, a descending week countdown, and private reference tables.",
   },
-  icons: { icon: "/icon.svg" },
+  icons: { icon: "/icon.svg", apple: "/apple-icon.png" },
+  appleWebApp: {
+    capable: true,
+    title: "Daymark",
+    statusBarStyle: "default",
+  },
   robots: { index: true, follow: true },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#f7f5f0",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -65,6 +77,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </main>
         <Footer />
+        <ServiceWorkerRegistrar />
       </body>
     </html>
   );

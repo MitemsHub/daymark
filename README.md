@@ -82,6 +82,23 @@ figures. Values are kept exactly as the source document records them,
 including the "Assitant Director" spelling and the zero limits. The table is
 a faithful copy of the paper it came from.
 
+### Installable app (PWA)
+
+Daymark is a full PWA. Install it from the browser menu ("Install app" on
+desktop Chrome/Edge, "Add to Home Screen" on iOS and Android) and it runs in
+its own window with its own icon, offline included:
+
+- A web app manifest (`app/manifest.ts`) with 192px, 512px and maskable 512px
+  icons, standalone display, and the paper theme color. The iOS home-screen
+  icon ships as `app/apple-icon.png`.
+- A small hand-written service worker (`public/sw.js`, no libraries):
+  navigations are network-first with a cached fallback, so the last pages you
+  visited stay usable with no connection; static assets are cache-first with
+  background refresh.
+- The icons are generated from `scripts/generate-icons.mjs` (pure Node, no
+  image libraries) so the favicon, manifest icons and apple-touch icon all
+  come from one drawing of the daymark mark.
+
 ### Data page (edit without code)
 
 Rates change. The Data page lets you change them without touching code:
@@ -202,7 +219,7 @@ deploying if reference data changes.
 ## Project structure
 
 ```
-app/                 routes (home, week, investments, grades, data) + SEO files
+app/                 routes (home, week, investments, grades, data) + SEO + manifest
 components/          UI components, one concern each
 lib/                 pure calculation engine + tests (no UI imports)
   dates.ts           inclusive/exclusive counts, breakdown, reverse calc
@@ -212,7 +229,18 @@ lib/                 pure calculation engine + tests (no UI imports)
   format.ts          naira formatting, rates, query matching
   dataStore.ts       localStorage override layer (Data page)
 data/                shipped reference data (types + values)
+public/              icons + service worker
+scripts/             generate-icons.mjs (PWA icon set, pure Node)
 ```
+
+## Mobile notes
+
+The layout is responsive throughout: the ledger tables collapse to cards on
+small screens, the week ruler scrolls horizontally with edge fades, and the
+timeline paginates. On touch devices, form controls render at 16px or larger
+so iOS Safari never auto-zooms when an input takes focus. The investments
+detail table scrolls horizontally inside its own container rather than
+stretching the page.
 
 ## Testing
 

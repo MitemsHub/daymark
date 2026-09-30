@@ -178,6 +178,16 @@ body {
   outline-offset: 2px;
 }
 
+/* Touch devices: keep form controls at 16px or more so iOS never
+   auto-zooms the page when an input takes focus. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Tabular figures for every measured value. */
 .tnum {
   font-family: var(--font-mono);
