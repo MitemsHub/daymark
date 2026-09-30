@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { runCallOver, DEFAULT_CHARGE_THRESHOLD, type CallOverResult } from "@/lib/callover";
+import { runCallOver, type CallOverResult } from "@/lib/callover";
 import { CalloverUploader, type CallOverData } from "@/components/CalloverUploader";
 import { CalloverResults } from "@/components/CalloverResults";
 
@@ -16,7 +16,6 @@ interface StoredSession {
 
 export function Callover() {
   const [data, setData] = useState<CallOverData | null>(null);
-  const [threshold, setThreshold] = useState(DEFAULT_CHARGE_THRESHOLD);
   const [result, setResult] = useState<CallOverResult | null>(null);
   const [running, setRunning] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -73,13 +72,13 @@ export function Callover() {
     setRunning(true);
     // A beat of matching animation so short runs are still visible.
     const work = new Promise<CallOverResult>((resolve) => {
-      setTimeout(() => resolve(runCallOver(data.payments, data.statement, threshold)), 700);
+      setTimeout(() => resolve(runCallOver(data.payments, data.statement)), 700);
     });
     work.then((r) => {
       setResult(r);
       setRunning(false);
     });
-  }, [data, threshold, running]);
+  }, [data, running]);
 
   const reset = useCallback(() => {
     setData(null);
@@ -92,22 +91,6 @@ export function Callover() {
       <h1 id="callover-heading" className="sr-only">
         Call over
       </h1>
-
-      {!result && (
-        <div className="flex justify-end mb-4 print:hidden">
-          <label className="text-sm text-ink-soft whitespace-nowrap">
-            Charge threshold{" "}
-            <input
-              type="number"
-              min={0}
-              step={500}
-              value={threshold}
-              onChange={(e) => setThreshold(Math.max(0, Number(e.target.value) || 0))}
-              className="tnum border hairline bg-white rounded-sm px-2 py-1.5 w-28 ml-1"
-            />
-          </label>
-        </div>
-      )}
 
       {!result && (
         <div className="mb-6">

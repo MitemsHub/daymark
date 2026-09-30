@@ -44,7 +44,7 @@ export type CallOverStatus =
   | "Reversed"
   | "Partial reversal"
   | "Double posted"
-  | "Partial payment"
+  | "Short paid"
   | "Not found";
 
 export interface RefHit {
@@ -85,12 +85,10 @@ export interface CallOverTotals {
   reversed: number;
   partialReversal: number;
   doublePosted: number;
-  partialPayment: number;
+  shortPaid: number;
   notFound: number;
   unexplainedDebits: number;
   unexplainedDebitTotal: number;
-  /** count of payments whose mention count does not fit the charge rule */
-  mentionAnomalies: number;
 }
 
 export interface CallOverResult {
@@ -98,10 +96,7 @@ export interface CallOverResult {
   /** statement debits no payment accounts for */
   unexplainedDebits: StatementLine[];
   totals: CallOverTotals;
-  threshold: number;
 }
-
-export const DEFAULT_CHARGE_THRESHOLD = 10_000;
 
 /** Characters stripped when normalizing references and narrations. */
 const SEPARATORS = /[\s/\\\-_.+,'’"]/g;
@@ -326,7 +321,7 @@ export function classifyPayment(payment: PaymentRow, lines: StatementLine[]): Pa
     if (credits.length === 0 && reversalCredits.length === 0) {
       status = "Paid";
       if (paymentDebits[0].debit < payment.amount - 0.005) {
-        status = "Partial payment";
+        status = "Short paid";
         note = `Statement shows ${paymentDebits[0].debit.toLocaleString("en-NG")} against a payment of ${payment.amount.toLocaleString("en-NG")}.`;
       } else if (paymentDebits[0].debit > payment.amount + 0.005) {
         note = "Statement debit is larger than the payment amount; check for added fees.";
@@ -361,6 +356,42 @@ export function classifyPayment(payment: PaymentRow, lines: StatementLine[]): Pa
     amountReturned,
     note,
   };
+}
+
+/**
+ * The second look, beyond the reference: does the matched debit actually
+ * resemble this payment? Amount must agree with the payment file, and the
+ * beneficiary's name should appear in the narration. When the line was
+ * matched through the bank's own Reference column (GTB style), the bank
+ * already ties the line to the payment and the name check is skipped.
+ * A miss never changes the status; it adds a cross-check note so a
+ * copied-wrong reference cannot hide.
+ */
+export function crossCheckMatch(payment: PaymentRow, verdict: PaymentVerdict, lineIndex?: Map<number, StatementLine>): string | undefined {
+  if (verdict.status !== "Paid" && verdict.status !== "Short paid") return undefined;
+  const line = lineIndex?.get(verdict.paymentDebits[0]?.lineId ?? -1);
+  if (!line) return undefined;
+
+  const amountOk = Math.abs(line.debit - payment.amount) <= 0.005;
+
+  const matchedViaRefField = payment.candidates.some((c) => line.refField !== "" && line.refField === c);
+  const tokens = payment.beneficiary
+    .toUpperCase()
+    .replace(/[^A-Z ]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length >= 4);
+  const upper = line.narration.toUpperCase();
+  const nameOk = matchedViaRefField || tokens.length === 0 || tokens.some((t) => upper.includes(t));
+
+  if (amountOk && nameOk) return undefined;
+  const bits: string[] = [];
+  if (!amountOk) {
+    bits.push(`the matched debit is ${line.debit.toLocaleString("en-NG")}, not the ${payment.amount.toLocaleString("en-NG")} on the payment file`);
+  }
+  if (!nameOk) {
+    bits.push(`the name "${payment.beneficiary}" does not appear in the matched line's narration`);
+  }
+  return `Cross-check: ${bits.join(" and ")}. The reference matched, but look at this one before trusting it.`;
 }
 
 /**
@@ -401,7 +432,6 @@ export function findProbable(
 export function runCallOver(
   payments: PaymentRow[],
   lines: StatementLine[],
-  threshold: number = DEFAULT_CHARGE_THRESHOLD,
 ): CallOverResult {
   const verdicts = payments.map((p) => classifyPayment(p, lines));
 
@@ -414,31 +444,26 @@ export function runCallOver(
     (l) => !claimed.has(l.id) && l.debit > 0 && !l.isChargeLine && !l.isReversal,
   );
 
-  let mentionAnomalies = 0;
-  for (const v of verdicts) {
-    if (v.status === "Not found") continue;
-    const expectedMin = v.payment.amount >= threshold ? 2 : 1;
-    if (v.foundCount < expectedMin) mentionAnomalies += 1;
-  }
-
   const totals: CallOverTotals = {
     payments: payments.length,
     paid: verdicts.filter((v) => v.status === "Paid").length,
     reversed: verdicts.filter((v) => v.status === "Reversed").length,
     partialReversal: verdicts.filter((v) => v.status === "Partial reversal").length,
     doublePosted: verdicts.filter((v) => v.status === "Double posted").length,
-    partialPayment: verdicts.filter((v) => v.status === "Partial payment").length,
+    shortPaid: verdicts.filter((v) => v.status === "Short paid").length,
     notFound: verdicts.filter((v) => v.status === "Not found").length,
     unexplainedDebits: unexplainedDebits.length,
     unexplainedDebitTotal: unexplainedDebits.reduce((s, l) => s + l.debit, 0),
-    mentionAnomalies,
   };
 
+  const lineIndex = new Map(lines.map((l) => [l.id, l]));
   for (const v of verdicts) {
     if (v.status === "Not found") {
       v.probable = findProbable(v.payment, lines, claimed);
     }
+    const cross = crossCheckMatch(v.payment, v, lineIndex);
+    if (cross) v.note = v.note ? `${v.note} ${cross}` : cross;
   }
 
-  return { verdicts, unexplainedDebits, totals, threshold };
+  return { verdicts, unexplainedDebits, totals };
 }

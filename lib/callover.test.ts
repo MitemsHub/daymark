@@ -8,7 +8,6 @@ import {
   toPaymentRow,
   classifyPayment,
   runCallOver,
-  DEFAULT_CHARGE_THRESHOLD,
   type StatementLine,
 } from "./callover";
 
@@ -132,10 +131,24 @@ describe("classification", () => {
     expect(v.amountSeen).toBe(180000);
   });
 
-  it("debit smaller than the payment is Partial payment", () => {
+  it("debit smaller than the payment is Short paid", () => {
     const line = L(1, "Withdrawal on Special Savings-ZBA00657550/CIB//NIP TFR TO F/FBN", 3000);
     const v = classifyPayment(P(1, "ZB/A/006575/50", "F", 5000), [line]);
-    expect(v.status).toBe("Partial payment");
+    expect(v.status).toBe("Short paid");
+  });
+
+  it("one debit then one credit is Reversed (Found 2 times), no charge lines needed", () => {
+    const debit = L(1, "Withdrawal on Special Savings-ZBA00657560/CIB//NIP TFR TO K/GTB", 30000);
+    const credit = L(2, "***RSVL Withdrawal on Special Savings-ZBA00657560/CIB//NIP TFR TO K/GTB", 0, 30000);
+    const v = classifyPayment(P(1, "ZB/A/006575/60", "K", 30000), [debit, credit]);
+    expect(v.status).toBe("Reversed");
+    expect(v.foundCount).toBe(2);
+  });
+
+  it("a non-reversal credit alone with the ref is still Reversed", () => {
+    const credit = L(1, "Withdrawal on Special Savings-ZBA00657565/CIB//NIP TFR TO L/GTB", 0, 15000);
+    const v = classifyPayment(P(1, "ZB/A/006575/65", "L", 15000), [credit]);
+    expect(v.status).toBe("Reversed");
   });
 
   it("no trace at all is Not found", () => {
@@ -179,22 +192,29 @@ describe("runCallOver totals and orphans", () => {
     expect(r.verdicts[0].probable?.lineId).toBe(6);
   });
 
-  it("counts mention anomalies against the charge rule", () => {
-    const r = runCallOver(payments, lines);
-    // payment 2 (2500, below threshold) found once: fine. Payment 1 found
-    // twice: fine. Payment 3 double posted found twice where the rule
-    // expects 2: fine. No anomalies here.
-    expect(r.totals.mentionAnomalies).toBe(0);
-    const odd = [
-      P(1, "ZB/A/006568/1", "A", 150000), // >= threshold but found... 2, ok
-      P(2, "ZB/A/006567/1", "B", 25000),  // >= threshold, found once -> anomaly
-    ];
-    const r2 = runCallOver(odd, lines);
-    expect(r2.totals.mentionAnomalies).toBe(1);
+  it("totals the Short paid count", () => {
+    const short = [P(1, "ZB/A/006575/50", "F", 5000)];
+    const shortLines = [L(1, "Withdrawal on Special Savings-ZBA00657550/CIB//NIP TFR TO F/FBN", 3000)];
+    const r = runCallOver(short, shortLines);
+    expect(r.totals.shortPaid).toBe(1);
+    expect(r.totals.paid).toBe(0);
   });
 
-  it("keeps the default threshold", () => {
-    expect(DEFAULT_CHARGE_THRESHOLD).toBe(10_000);
+  it("cross-checks a Paid verdict whose amount disagrees with the payment file", () => {
+    // Reference matches but the debit is a different amount: the engine
+    // keeps Paid (the reference is the bank's own link) and adds a note.
+    const line = L(1, "Withdrawal on Special Savings-ZBA00657570/CIB//NIP TFR TO M/GTB", 41000);
+    const r = runCallOver([P(1, "ZB/A/006575/70", "M", 40000)], [line]);
+    expect(r.verdicts[0].status).toBe("Paid");
+    expect(r.verdicts[0].note).toContain("Cross-check");
+    expect(r.verdicts[0].note).toContain("not the 40,000");
+  });
+
+  it("a clean Paid match gets no cross-check note", () => {
+    const line = L(1, "Withdrawal on Special Savings-ZBA00657575/CIB//NIP TFR TO NIAJA NWACHUKWU/GTB", 45000);
+    const r = runCallOver([P(1, "ZB/A/006575/75", "NIAJA NWACHUKWU", 45000)], [line]);
+    expect(r.verdicts[0].status).toBe("Paid");
+    expect(r.verdicts[0].note).toBeUndefined();
   });
 });
 

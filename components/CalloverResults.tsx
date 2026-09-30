@@ -7,7 +7,7 @@ const STATUS_ORDER: CallOverStatus[] = [
   "Double posted",
   "Partial reversal",
   "Reversed",
-  "Partial payment",
+  "Short paid",
   "Not found",
   "Paid",
 ];
@@ -17,7 +17,7 @@ const STATUS_TONE: Record<CallOverStatus, string> = {
   Reversed: "text-stamp",
   "Partial reversal": "text-stamp",
   "Double posted": "text-stamp",
-  "Partial payment": "text-ink",
+  "Short paid": "text-ink",
   "Not found": "text-ink-faint",
 };
 
@@ -46,7 +46,7 @@ function VerdictRow({ v, defaultOpen }: { v: PaymentVerdict; defaultOpen?: boole
         aria-expanded={open}
       >
         <td className="num">{v.payment.ref || "\u00a0"}</td>
-        <td className="hidden sm:table-cell">{v.payment.beneficiary || "\u00a0"}</td>
+        <td className="whitespace-normal">{v.payment.beneficiary || "\u00a0"}</td>
         <td className="num">{naira(v.payment.amount)}</td>
         <td className={`font-semibold ${STATUS_TONE[v.status]}`}>
           {v.status}{" "}
@@ -166,7 +166,7 @@ export function CalloverResults({
         <Tile label="Paid" value={totals.paid} tone="text-leaf" />
         <Tile label="Reversed" value={totals.reversed + totals.partialReversal} tone="text-stamp" />
         <Tile label="Double posted" value={totals.doublePosted} tone="text-stamp" />
-        <Tile label="Partial pay" value={totals.partialPayment} tone="text-ink" />
+        <Tile label="Short paid" value={totals.shortPaid} tone="text-ink" />
         <Tile label="Not found" value={totals.notFound} tone="text-stamp" />
       </div>
 
@@ -219,7 +219,7 @@ export function CalloverResults({
               <thead>
                 <tr>
                   <th scope="col">Reference</th>
-                  <th scope="col" className="hidden sm:table-cell">Beneficiary</th>
+                  <th scope="col">Name</th>
                   <th scope="col" className="!text-right">Amount</th>
                   <th scope="col">Status</th>
                 </tr>
@@ -252,7 +252,7 @@ export function CalloverResults({
             <thead>
               <tr>
                 <th scope="col">Reference</th>
-                <th scope="col" className="hidden sm:table-cell">Beneficiary</th>
+                <th scope="col">Name</th>
                 <th scope="col" className="!text-right">Amount</th>
                 <th scope="col">Status</th>
               </tr>
@@ -261,11 +261,11 @@ export function CalloverResults({
               {paid.map((v) => (
                 <tr key={v.payment.id}>
                   <td className="num">{v.payment.ref}</td>
-                  <td className="hidden sm:table-cell">{v.payment.beneficiary}</td>
+                  <td className="whitespace-normal">{v.payment.beneficiary}</td>
                   <td className="num">{naira(v.payment.amount)}</td>
                   <td className="text-leaf">
                     Paid{" "}
-                    <span className="tnum text-ink-faint whitespace-nowrap">
+                    <span className="tnum text-ink-faint sm:whitespace-nowrap">
                       (Found {v.foundCount} {v.foundCount === 1 ? "time" : "times"})
                     </span>
                   </td>
