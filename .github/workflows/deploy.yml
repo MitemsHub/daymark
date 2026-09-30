@@ -6,7 +6,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  # contents: write lets the gh-pages publish step create and push the branch
+  contents: write
   pages: write
   id-token: write
 
