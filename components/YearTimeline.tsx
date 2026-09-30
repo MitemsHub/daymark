@@ -3,8 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { getYearTimeline, toISODate, type TimelineWeek } from "@/lib/weeks";
 
-const YEARS_BACK = 3;
-const YEARS_FORWARD = 2;
+const YEARS_BACK = 30;
+const YEARS_FORWARD = 25;
+// The window is relative to the current year, so 2029, 2030 and beyond
+// appear on their own as time passes. The week math itself has no year
+// limit; WeekLookup accepts any year from 1900 to 2200.
 const PER_PAGE = 9; // 53 weeks -> 6 pages (last page holds 8)
 
 /** Compact range that always fits the card: "7 – 13 Sep" or "28 Sep – 4 Oct". */
