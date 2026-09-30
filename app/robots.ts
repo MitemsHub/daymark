@@ -3,7 +3,8 @@ import type { MetadataRoute } from "next";
 export const dynamic = "force-static";
 
 export default function robots(): MetadataRoute.Robots {
+  const base = process.env.PAGES_BASE_PATH || "";
   return {
-    rules: { userAgent: "*", allow: "/", disallow: "/data" },
+    rules: { userAgent: "*", allow: "/", disallow: `${base}/data` },
   };
 }

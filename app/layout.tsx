@@ -19,7 +19,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://daymark.mitemshub.com"),
+  metadataBase: new URL("https://mitemshub.github.io/daymark"),
   title: {
     default: "Daymark: Date & Week Calculator + Co-op Reference",
     template: "%s · Daymark",
@@ -47,7 +47,10 @@ export const metadata: Metadata = {
     description:
       "Inclusive/exclusive day counts, a descending week countdown, and private reference tables.",
   },
-  icons: { icon: "/icon.svg", apple: "/apple-icon.png" },
+  icons: {
+    icon: `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/icon.svg`,
+    apple: `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/apple-icon.png`,
+  },
   appleWebApp: {
     capable: true,
     title: "Daymark",
