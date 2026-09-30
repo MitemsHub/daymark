@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Date & week calculator with a private cooperative reference: investment series and member grades.",
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

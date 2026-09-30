@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     template: "%s · Daymark",
   },
   description:
-    "Calculate date ranges in inclusive/exclusive days, weeks and months, track the year with a descending week countdown, and keep investment series and member grade limits at hand.",
+    "Calculate date ranges as + Today and − Today day counts, weeks and months, track the year with a descending week countdown, and keep investment series and member grade limits at hand.",
   keywords: [
     "date calculator",
     "week calculator",
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Daymark: Date & Week Calculator",
     description:
-      "Inclusive/exclusive day counts, a descending week countdown, and private reference tables for investment series and member grades.",
+      "+ Today and − Today day counts, a descending week countdown, and private reference tables for investment series and member grades.",
     type: "website",
     siteName: "Daymark",
   },
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     card: "summary",
     title: "Daymark: Date & Week Calculator",
     description:
-      "Inclusive/exclusive day counts, a descending week countdown, and private reference tables.",
+      "+ Today and − Today day counts, a descending week countdown, and private reference tables.",
   },
   icons: {
     icon: `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/icon.svg`,

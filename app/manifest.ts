@@ -13,7 +13,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Daymark: Date & Week Calculator + Co-op Reference",
     short_name: "Daymark",
     description:
-      "Inclusive/exclusive day counts, a descending week countdown that matches the printed wall calendar, and private reference tables for investment series and member grades.",
+      "+ Today and − Today day counts, a descending week countdown that matches the printed wall calendar, and private reference tables for investment series and member grades.",
     id: root,
     start_url: root,
     scope: root,

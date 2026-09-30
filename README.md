@@ -18,16 +18,18 @@ No sign-in, no server, no tracking. Your data edits stay in your browser.
 ### Calculator
 
 - **Date range calculator.** Enter two dates and you get:
-  - Total days, inclusive: both endpoints counted (Apr 16 to Sep 29 2026 = 167)
-  - Total days, exclusive: the elapsed difference (same example = 166)
+  - Total days, + Today: both endpoints counted (Apr 16 to Sep 29 2026 = 167)
+  - Total days, − Today: the elapsed difference (same example = 166)
+  - The labels adapt: with an end date in the future they read + End date
+    and − End date instead, so they stay truthful
   - Weeks plus leftover days (`23w 5d`) and a calendar span in months + days
   - Both dates echoed back in full
 - **Breakdown by month.** How many days each calendar month contributes
   (April 16-30 = 15, May = 31, and so on; the segments always sum to the
-  inclusive total).
+  + Today total).
 - **Reverse calculation.** Start date plus or minus N days. Add counts
-  inclusively (the start date is day 1); subtract moves back exactly N
-  elapsed days.
+  the start date as day 1 (the + Today total); subtract moves back exactly N
+  elapsed days (the − Today total).
 - A **Today** button beside every date input. It reads your device's local
   date, never a hard-coded one.
 
@@ -169,18 +171,18 @@ All date logic lives in `lib/dates.ts` and is unit-tested in
 
 - Dates are parsed into **local** calendar days (constructed at noon) so
   timezone shifts can never move a day boundary.
-- Inclusive count = `differenceInCalendarDays(end, start) + 1`. Both
+- The **+ Today** count is `differenceInCalendarDays(end, start) + 1`. Both
   endpoints counted; same day = 1.
-- Exclusive count = `differenceInCalendarDays(end, start)`. Elapsed days;
-  same day = 0.
-- Weeks + days divide the exclusive count by 7.
+- The **− Today** count is `differenceInCalendarDays(end, start)`. Elapsed
+  days; same day = 0.
+- Weeks + days divide the − Today count by 7.
 - The calendar span uses date-fns' month difference, which clamps the
   calendar way (Jan 31 + 1 month = Feb 28), then counts leftover days.
 - Reverse **add** treats the start date as day 1 (start + 1 day = start),
-  so an "add 30 days" span matches a 30-day inclusive range. Reverse
+  so an "add 30 days" span matches a 30-day + Today range. Reverse
   **subtract** moves back exactly N elapsed days.
 - The month breakdown walks the range month by month, clamping each segment
-  to the range edges, and its segments sum exactly to the inclusive total.
+  to the range edges, and its segments sum exactly to the + Today total.
 
 ## How the descending week system works
 
@@ -267,7 +269,7 @@ GitHub Actions picks the rest up from the script.
 app/                 routes (home, week, investments, grades, data) + SEO + manifest
 components/          UI components, one concern each
 lib/                 pure calculation engine + tests (no UI imports)
-  dates.ts           inclusive/exclusive counts, breakdown, reverse calc
+  dates.ts           + Today / − Today counts, breakdown, reverse calc
   weeks.ts           descending week system
   investments.ts     anniversary/status engine
   grades.ts          grade search/sort

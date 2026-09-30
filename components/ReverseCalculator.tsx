@@ -74,7 +74,7 @@ export function ReverseCalculator() {
       {result && !error && (
         <div key={`${mode}-${result.resultISO}`} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 swap-in" aria-live="polite">
           <p className="eyebrow">
-            {mode === "add" ? "Counting inclusively forward" : "Counting elapsed days back"}
+            {mode === "add" ? "Counting the end date in (+ Today style)" : "Counting elapsed days back (− Today style)"}
           </p>
           <p className="display text-3xl sm:text-4xl">{formatLong(result.resultISO)}</p>
           <p className="text-sm text-ink-soft tnum">{parseISODate(result.resultISO).toLocaleDateString("en-GB", { weekday: "long" })}</p>
@@ -82,9 +82,9 @@ export function ReverseCalculator() {
       )}
 
       <p className="mt-3 text-xs text-ink-faint max-w-prose">
-        Add: the start date is day 1 of the count (start + 1 day = start). Subtract: exactly{" "}
-        <span className="tnum">N</span> elapsed days back. Both match the main calculator's inclusive
-        span of <span className="tnum">N</span> days.
+        Add: the start date is day 1 of the count (start + 1 day = start), the same total as{" "}
+        <span className="tnum">+ Today</span>. Subtract: exactly <span className="tnum">N</span> elapsed
+        days back, the same total as <span className="tnum">− Today</span>.
       </p>
     </section>
   );

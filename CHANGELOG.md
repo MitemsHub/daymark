@@ -6,9 +6,10 @@ First release. Everything below ships in it.
 
 ### Calculator
 
-- Inclusive and exclusive day counts between two dates, with weeks plus
+- Day counts between two dates in the + Today / − Today form (labels adapt
+  to + End date / − End date when the end is not today), with weeks plus
   leftover days and a calendar span in months and days.
-- Month-by-month breakdown whose segments sum exactly to the inclusive
+- Month-by-month breakdown whose segments sum exactly to the + Today
   total.
 - Reverse calculation: start date plus or minus N days.
 - Today buttons that read the device's local date.

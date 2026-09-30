@@ -30,6 +30,10 @@ export function DateCalculator() {
     return { error: null as null, inclusive, exclusive, weeks, restDays, months, diff, breakdown, start, end };
   }, [start, end]);
 
+  const endIsToday = end === todayISO();
+  const plusLabel = endIsToday ? "+ Today" : "+ End date";
+  const minusLabel = endIsToday ? "\u2212 Today" : "\u2212 End date";
+
   return (
     <section aria-labelledby="calc-heading" className="reveal delay-1">
       <h2 id="calc-heading" className="sr-only">
@@ -48,14 +52,14 @@ export function DateCalculator() {
         <div key={`${result.start}-${result.end}`} className="grid lg:grid-cols-[1.2fr_1fr] gap-8 swap-in">
           <div>
             <div className="flex flex-wrap items-end gap-x-10 gap-y-4 pb-5 border-b hairline">
-              <div>
-                <p className="eyebrow mb-1">Total days, inclusive</p>
+              <div title="Both the start date and the end date are counted in this total.">
+                <p className="eyebrow mb-1">Total days, {plusLabel}</p>
                 <p className="display tnum text-6xl sm:text-7xl text-stamp stamp-in" aria-live="polite">
                   {result.inclusive}
                 </p>
               </div>
-              <div>
-                <p className="eyebrow mb-1">Total days, exclusive</p>
+              <div title="Elapsed days only; the end date itself is not counted.">
+                <p className="eyebrow mb-1">Total days, {minusLabel}</p>
                 <p className="display tnum text-3xl sm:text-4xl">{result.exclusive}</p>
               </div>
               <div>
@@ -73,6 +77,10 @@ export function DateCalculator() {
               </div>
             </div>
 
+            <p className="text-xs text-ink-faint mb-2 max-w-prose">
+              {plusLabel} counts the end date in the total; {minusLabel} stops the day before.
+            </p>
+
             <dl className="mt-2">
               <StatRow label="Start date" value={formatLong(result.start)} />
               <StatRow label="End date" value={formatLong(result.end)} />
@@ -84,7 +92,7 @@ export function DateCalculator() {
               Breakdown by month
             </h3>
             <table className="ledger ledger--compact">
-              <caption className="sr-only">Days contributed per calendar month, inclusive</caption>
+              <caption className="sr-only">Days contributed per calendar month</caption>
               <thead>
                 <tr>
                   <th scope="col">Month</th>
@@ -113,7 +121,7 @@ export function DateCalculator() {
               </tbody>
               <tfoot>
                 <tr>
-                  <th scope="row" colSpan={2}>Total, inclusive</th>
+                  <th scope="row" colSpan={2}>Total, {plusLabel}</th>
                   <td className="num text-stamp">{result.inclusive}</td>
                 </tr>
               </tfoot>

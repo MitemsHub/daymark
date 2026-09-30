@@ -71,7 +71,7 @@ export function validateRange(startISO: string, endISO: string): string | null {
     return "One of those dates doesn't exist on the calendar. Check day and month.";
   }
   if (e.getTime() === s.getTime()) {
-    return "Start and end are the same day. Inclusive count is 1; exclusive count is 0. Pick a later end date to see a full breakdown.";
+    return "Start and end are the same day. The + Today count is 1 and the − Today count is 0. Pick a later end date to see a full breakdown.";
   }
   if (e < s) return "The end date is before the start date. Swap them or pick a later end date.";
   return null;

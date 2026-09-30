@@ -7,7 +7,7 @@ import { ActiveSeriesWidget } from "@/components/ActiveSeriesWidget";
 export const metadata: Metadata = {
   title: "Date & Week Calculator",
   description:
-    "Inclusive/exclusive day counts, weeks and months between two dates, with the year's descending week countdown alongside.",
+    "+ Today and − Today day counts, weeks and months between two dates, with the year's descending week countdown alongside.",
 };
 
 export default function HomePage() {
