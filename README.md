@@ -50,11 +50,13 @@ Dec 28 - Dec 31  (blank)   (final partial week, unnumbered)
   of numbered weeks remaining, current week included. Example: Sep 28 to
   Oct 4 2026 is Week 13, with 13 weeks remaining.
 - The **countdown ruler** lays the whole year out as a strip from Week 52
-  down to Week 1 with today marked.
+  down to Week 1. It opens centered on the current week (free scrolling
+  still works), with past weeks dimmed and arrow buttons for mouse users.
 - **Lookup by date** (calendar week, descending week, range, days left) and
   **by week number** (1 to 52).
-- The **year timeline** lists all 53 calendar weeks of any selected year,
-  current week highlighted, final week unnumbered.
+- The **year timeline** shows any selected year as paginated week cards,
+  nine per page. It opens on the page holding the current week, highlights
+  it, dims elapsed weeks, and leaves the final week unnumbered.
 
 A note on the printed sheet: its December labels drift by one day (row 50
 says "6DEC-12DEC" while its own day cells read 7-13). The day cells keep the

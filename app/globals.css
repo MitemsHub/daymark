@@ -266,6 +266,17 @@ body {
   animation: dm-pulse 2.4s ease-in-out infinite;
 }
 
+/* Horizontal strips that scroll freely but never show a raw scrollbar bar.
+   Edge fades and arrow buttons signal the scrollability instead. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Stagger groups: children fill in one after another on mount. */
 .stagger > * {
   animation: dm-row 0.4s ease-out both;
