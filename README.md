@@ -1,5 +1,9 @@
 # Daymark
 
+[![Deploy to GitHub Pages](https://github.com/MitemsHub/daymark/actions/workflows/deploy.yml/badge.svg)](https://github.com/MitemsHub/daymark/actions/workflows/deploy.yml) [![Live site](https://img.shields.io/website?url=https%3A%2F%2Fmitemshub.github.io%2Fdaymark%2F&label=live%20site)](https://mitemshub.github.io/daymark/)
+
+**Daymark is live: [https://mitemshub.github.io/daymark/](https://mitemshub.github.io/daymark/)**
+
 A date and week calculator built for day-to-day co-op work. It counts days
 between dates, runs a descending week countdown that matches the printed
 wall calendar, and keeps the investment series and member grade tables one
@@ -87,6 +91,22 @@ a faithful copy of the paper it came from.
 Daymark is a full PWA. Install it from the browser menu ("Install app" on
 desktop Chrome/Edge, "Add to Home Screen" on iOS and Android) and it runs in
 its own window with its own icon, offline included:
+
+On your phone, with the live site:
+
+1. Open [https://mitemshub.github.io/daymark/](https://mitemshub.github.io/daymark/)
+   once in your phone's browser.
+2. **Android (Chrome):** tap the three-dot menu, then "Add to Home screen",
+   and confirm. **iPhone (Safari):** tap the Share button, scroll, then
+   "Add to Home Screen". (On iOS the install entry lives behind Share; Chrome
+   on iPhone cannot install PWAs.)
+3. Launch Daymark from your home screen. It opens in its own window, without
+   browser bars, with the Daymark icon.
+4. Offline test: open the app, visit each tab once, then turn on airplane
+   mode and reopen it. Pages you visited keep working; the calculator, week
+   countdown and reference tables all run locally, so everything responds
+   with no connection. Reconnect before editing reference data on another
+   device, since edits live per browser.
 
 - A web app manifest (`app/manifest.ts`) with 192px, 512px and maskable 512px
   icons, standalone display, and the paper theme color. The iOS home-screen
