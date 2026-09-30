@@ -1,15 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { runCallOver, type CallOverResult } from "@/lib/callover";
+import { buildReportHtml, printReportHtml } from "@/lib/report";
 import { CalloverUploader, type CallOverData } from "@/components/CalloverUploader";
 import { CalloverResults } from "@/components/CalloverResults";
 
-const SESSION_KEY = "daymark.callover.v1";
+const SESSION_KEY = "daymark.callover.v2";
+const SESSION_TTL_MS = 60 * 60 * 1000; // one hour after results show
 
 interface StoredSession {
-  statementName: string;
-  paymentsName: string;
+  savedAt: number;
+  statementFiles: string[];
+  paymentsFiles: string[];
   statement: { id: number; dateISO: string; narration: string; debit: number; credit: number }[];
   payments: { id: number; ref: string; beneficiary: string; amount: number; dueDateISO: string }[];
 }
@@ -18,51 +21,108 @@ export function Callover() {
   const [data, setData] = useState<CallOverData | null>(null);
   const [result, setResult] = useState<CallOverResult | null>(null);
   const [running, setRunning] = useState(false);
+  const [expiresAt, setExpiresAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const [hydrated, setHydrated] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Restore a previous session if one exists.
+  const clearSession = useCallback(() => {
+    try {
+      window.localStorage.removeItem(SESSION_KEY);
+    } catch {
+      // Storage unavailable: nothing to clear.
+    }
+  }, []);
+
+  // Restore a previous session if one exists and it is still fresh.
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(SESSION_KEY);
       if (raw) {
         const s: StoredSession = JSON.parse(raw);
-        if (s.statement?.length && s.payments?.length) {
+        const fresh = Date.now() - s.savedAt < SESSION_TTL_MS;
+        if (fresh && s.statement?.length && s.payments?.length) {
           import("@/lib/callover").then(({ toStatementLine, toPaymentRow }) => {
             const statement = s.statement.map((l) => toStatementLine(l.id, { date: l.dateISO, narration: l.narration, debit: l.debit, credit: l.credit }));
             const payments = s.payments.map((p) => toPaymentRow(p.id, { ref: p.ref, beneficiary: p.beneficiary, amount: p.amount, dueDate: p.dueDateISO }));
-            setData({ statement, payments, statementName: s.statementName, paymentsName: s.paymentsName });
+            setData({
+              statement,
+              payments,
+              statementFiles: s.statementFiles,
+              paymentsFiles: s.paymentsFiles,
+              statementName: s.statementFiles.join(", "),
+              paymentsName: s.paymentsFiles.join(", "),
+            });
+            setExpiresAt(s.savedAt + SESSION_TTL_MS);
           });
+        } else {
+          clearSession();
         }
       }
     } catch {
       // A broken session is the same as no session.
     }
     setHydrated(true);
-  }, []);
+  }, [clearSession]);
 
-  const persist = useCallback((d: CallOverData | null) => {
-    try {
-      if (!d || d.statement.length === 0 || d.payments.length === 0) {
-        window.localStorage.removeItem(SESSION_KEY);
-        return;
+  // The countdown ticker, running only while a session is live.
+  useEffect(() => {
+    if (expiresAt === null) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
       }
-      const s: StoredSession = {
-        statementName: d.statementName,
-        paymentsName: d.paymentsName,
-        statement: d.statement.map((l) => ({ id: l.id, dateISO: l.dateISO, narration: l.narration, debit: l.debit, credit: l.credit })),
-        payments: d.payments.map((p) => ({ id: p.id, ref: p.ref, beneficiary: p.beneficiary, amount: p.amount, dueDateISO: p.dueDateISO })),
-      };
-      window.localStorage.setItem(SESSION_KEY, JSON.stringify(s));
-    } catch {
-      // Storage full or unavailable: the session just lives in memory.
+      return;
     }
-  }, []);
+    timerRef.current = setInterval(() => setNow(Date.now()), 1000);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [expiresAt]);
+
+  const wipe = useCallback(() => {
+    setData(null);
+    setResult(null);
+    setExpiresAt(null);
+    clearSession();
+  }, [clearSession]);
+
+  // When the hour is up, everything goes.
+  useEffect(() => {
+    if (expiresAt !== null && now >= expiresAt) wipe();
+  }, [now, expiresAt, wipe]);
+
+  const persist = useCallback(
+    (d: CallOverData | null) => {
+      try {
+        if (!d || d.statement.length === 0 || d.payments.length === 0) {
+          clearSession();
+          return;
+        }
+        const s: StoredSession = {
+          savedAt: Date.now(),
+          statementFiles: d.statementFiles,
+          paymentsFiles: d.paymentsFiles,
+          statement: d.statement.map((l) => ({ id: l.id, dateISO: l.dateISO, narration: l.narration, debit: l.debit, credit: l.credit })),
+          payments: d.payments.map((p) => ({ id: p.id, ref: p.ref, beneficiary: p.beneficiary, amount: p.amount, dueDateISO: p.dueDateISO })),
+        };
+        window.localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+      } catch {
+        // Storage full or unavailable: the session just lives in memory.
+      }
+    },
+    [clearSession],
+  );
 
   const onReady = useCallback(
     (d: CallOverData) => {
       setData(d);
-      persist(d);
       setResult(null);
+      setExpiresAt(null);
+      persist(d);
     },
     [persist],
   );
@@ -77,14 +137,35 @@ export function Callover() {
     work.then((r) => {
       setResult(r);
       setRunning(false);
+      // The hour starts when the results show.
+      const at = Date.now() + SESSION_TTL_MS;
+      setExpiresAt(at);
+      persist({ ...data });
+      try {
+        const raw = window.localStorage.getItem(SESSION_KEY);
+        if (raw) {
+          const s: StoredSession = JSON.parse(raw);
+          s.savedAt = Date.now();
+          window.localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+        }
+      } catch {
+        // ignore
+      }
     });
-  }, [data, running]);
+  }, [data, running, persist]);
 
-  const reset = useCallback(() => {
-    setData(null);
-    setResult(null);
-    persist(null);
-  }, [persist]);
+  const print = useCallback(() => {
+    if (!result || !data) return;
+    printReportHtml(
+      buildReportHtml(result, {
+        statementFiles: data.statementFiles.length > 0 ? data.statementFiles : [data.statementName],
+        paymentsFiles: data.paymentsFiles.length > 0 ? data.paymentsFiles : [data.paymentsName],
+        runDate: new Date(),
+      }),
+    );
+  }, [result, data]);
+
+  const minutesLeft = expiresAt !== null ? Math.max(0, Math.ceil((expiresAt - now) / 60_000)) : null;
 
   return (
     <section aria-labelledby="callover-heading" className="reveal">
@@ -95,6 +176,7 @@ export function Callover() {
       {!result && (
         <div className="mb-6">
           <CalloverUploader onReady={onReady} />
+
           <button
             type="button"
             onClick={run}
@@ -115,12 +197,18 @@ export function Callover() {
       )}
 
       {result && data && (
-        <CalloverResults result={result} statementName={data.statementName} paymentsName={data.paymentsName} onReset={reset} />
+        <CalloverResults result={result} statementName={data.statementName} paymentsName={data.paymentsName} onReset={wipe} onPrint={print} />
+      )}
+
+      {minutesLeft !== null && (
+        <p className="text-xs text-ink-faint mt-4 print:hidden" role="timer" aria-live="off">
+          This session, including the files you uploaded, clears itself in {minutesLeft} minute{minutesLeft === 1 ? "" : "s"}.
+        </p>
       )}
 
       {hydrated && !data && !result && (
         <p className="text-xs text-ink-faint mt-8 print:hidden">
-          Files stay on this device. A session is remembered in this browser until you start a new one.
+          Files never leave this device or reach any storage. A session clears itself one hour after results show.
         </p>
       )}
     </section>

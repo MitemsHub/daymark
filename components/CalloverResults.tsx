@@ -103,11 +103,13 @@ export function CalloverResults({
   statementName,
   paymentsName,
   onReset,
+  onPrint,
 }: {
   result: CallOverResult;
   statementName: string;
   paymentsName: string;
   onReset: () => void;
+  onPrint: () => void;
 }) {
   const [showPaid, setShowPaid] = useState(false);
   const [query, setQuery] = useState("");
@@ -151,7 +153,7 @@ export function CalloverResults({
             placeholder="Search reference or name"
             className="border hairline bg-white rounded-sm px-3 py-2 text-sm w-full sm:w-56"
           />
-          <button type="button" onClick={() => window.print()} className="flex-1 sm:flex-none text-sm px-3 py-2 border border-stamp text-stamp rounded-sm hover:bg-stamp hover:text-white transition-colors font-semibold">
+          <button type="button" onClick={onPrint} className="flex-1 sm:flex-none text-sm px-3 py-2 border border-stamp text-stamp rounded-sm hover:bg-stamp hover:text-white transition-colors font-semibold">
             Print report
           </button>
           <button type="button" onClick={onReset} className="text-sm text-ink-soft hover:text-stamp px-2 py-2 transition-colors">

@@ -15,6 +15,9 @@ import type { StatementLine, PaymentRow } from "@/lib/callover";
 export interface CallOverData {
   statement: StatementLine[];
   payments: PaymentRow[];
+  statementFiles: string[];
+  paymentsFiles: string[];
+  /** kept for the localStorage session shape */
   statementName: string;
   paymentsName: string;
 }
@@ -35,12 +38,12 @@ function fmtSize(bytes: number): string {
 function DropZone({
   side,
   state,
-  onFile,
+  onFiles,
   onClear,
 }: {
   side: "statement" | "payments";
   state: SideState;
-  onFile: (f: File) => void;
+  onFiles: (files: File[]) => void;
   onClear: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -62,8 +65,8 @@ function DropZone({
       onDrop={(e) => {
         e.preventDefault();
         setDrag(false);
-        const f = e.dataTransfer.files?.[0];
-        if (f) onFile(f);
+        const files = [...(e.dataTransfer.files ?? [])];
+        if (files.length > 0) onFiles(files);
       }}
       className={`border border-dashed rounded-md p-5 cursor-pointer transition-colors reveal delay-1 ${
         drag ? "border-stamp bg-stamp-wash" : "hairline hover:border-ink-faint bg-white"
@@ -72,11 +75,12 @@ function DropZone({
       <input
         ref={inputRef}
         type="file"
+        multiple
         accept=".xls,.xlsx,.csv,.pdf"
         className="sr-only"
         onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) onFile(f);
+          const files = [...(e.target.files ?? [])];
+          if (files.length > 0) onFiles(files);
           e.target.value = "";
         }}
       />
@@ -91,23 +95,21 @@ function DropZone({
             }}
             className="text-xs text-ink-faint hover:text-stamp transition-colors"
           >
-            Remove
+            Clear
           </button>
         )}
       </div>
 
       {state.status === "idle" && (
         <p className="text-sm text-ink-soft mt-2">
-          Drop the {label.toLowerCase()} file here, or click to choose. Excel (.xls, .xlsx), CSV or PDF.
+          Drop {label.toLowerCase()} file(s) here, or click to choose. Excel (.xls, .xlsx), CSV or PDF. Several files are merged.
         </p>
       )}
       {state.status === "working" && <p className="text-sm text-ink-soft mt-2">Reading {state.name}...</p>}
       {state.status === "done" && (
         <div className="mt-2">
           <p className="text-sm font-medium text-ink">{state.name}</p>
-          <p className="text-xs text-ink-faint tnum">
-            {state.kind} · {state.message}
-          </p>
+          <p className="text-xs text-ink-faint tnum">{state.message}</p>
         </div>
       )}
       {state.status === "error" && (
@@ -125,95 +127,141 @@ export function CalloverUploader({ onReady }: { onReady: (data: CallOverData) =>
   const [payments, setPayments] = useState<SideState>(emptySide);
   const [data, setData] = useState<CallOverData | null>(null);
 
-  const parseStatement = useCallback(
-    async (file: File) => {
-      setStatement({ name: file.name, kind: fmtSize(file.size), status: "working", message: "" });
+  const parseStatementFiles = useCallback(
+    async (files: File[]) => {
+      const names = files.map((f) => f.name);
+      setStatement({ name: names.join(", "), kind: "", status: "working", message: "" });
       try {
-        const buf = await file.arrayBuffer();
-        let lines: StatementLine[] = [];
-        const isPdf = file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf";
-        if (isPdf) {
-          const { parsePdfRows, bucketRow, boundariesFromHeader } = await import("@/lib/parsePdf");
-          const pdf = await parsePdfRows(buf);
-          // Find a header row: contains a date-ish and a debit/credit word.
-          const headerIdx = pdf.rows.findIndex((r) =>
-            /(DATE|EFFECTIVE)/i.test(r.line) && /(DEBIT|CREDIT|NARRATION|DESCRIPTION|REMARKS)/i.test(r.line),
-          );
-          if (headerIdx === -1) {
-            throw new Error(
-              `No table header found in the PDF (${pdf.pageCount} pages, ${pdf.rows.length} rows). If the bank prints this as an image, use the Excel export instead.`,
-            );
-          }
-          const header = pdf.rows[headerIdx];
-          const { boundaries } = boundariesFromHeader(header);
-          const H = header.words.map((w) => w.text.toUpperCase());
-          const col = (re: RegExp) => H.findIndex((h) => re.test(h));
-          const dateCol = col(/EFFECTIVE|VALUE|TRANS|DATE/);
-          const narCol = col(/DESCRIPTION|NARRATION|PAYEE|MEMO|REMARKS/);
-          const debCol = col(/DEBIT|WITHDRAW/);
-          const creCol = col(/CREDIT|DEPOSIT/);
-          for (const row of pdf.rows.slice(headerIdx + 1)) {
-            const cells = bucketRow(row, boundaries);
-            const debit = debCol >= 0 ? cells[debCol] : "";
-            const credit = creCol >= 0 ? cells[creCol] : "";
-            if (!cells[narCol]?.trim()) continue;
-            if (!debit.trim() && !credit.trim()) continue;
-            lines.push(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await import("@/lib/callover").then((m) =>
-                m.toStatementLine(lines.length + 1, {
+        const { toStatementLine } = await import("@/lib/callover");
+        const all: StatementLine[] = [];
+        const failures: string[] = [];
+        for (const file of files) {
+          try {
+            const buf = await file.arrayBuffer();
+            let lines: StatementLine[] = [];
+            const isPdf = file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf";
+            if (isPdf) {
+              const { parsePdfRows, bucketRow, boundariesFromHeader } = await import("@/lib/parsePdf");
+              const pdf = await parsePdfRows(buf);
+              const headerIdx = pdf.rows.findIndex((r) =>
+                /(DATE|EFFECTIVE)/i.test(r.line) && /(DEBIT|CREDIT|NARRATION|DESCRIPTION|REMARKS)/i.test(r.line),
+              );
+              if (headerIdx === -1) throw new Error("no table header found in the PDF; use the Excel export if the bank prints it as an image");
+              const header = pdf.rows[headerIdx];
+              const { boundaries } = boundariesFromHeader(header);
+              const H = header.words.map((w) => w.text.toUpperCase());
+              const col = (re: RegExp) => H.findIndex((h) => re.test(h));
+              const dateCol = col(/EFFECTIVE|VALUE|TRANS|DATE/);
+              const narCol = col(/DESCRIPTION|NARRATION|PAYEE|MEMO|REMARKS/);
+              const debCol = col(/DEBIT|WITHDRAW/);
+              const creCol = col(/CREDIT|DEPOSIT/);
+              for (const row of pdf.rows.slice(headerIdx + 1)) {
+                const cells = bucketRow(row, boundaries);
+                const debit = debCol >= 0 ? cells[debCol] : "";
+                const credit = creCol >= 0 ? cells[creCol] : "";
+                if (!cells[narCol]?.trim()) continue;
+                if (!debit.trim() && !credit.trim()) continue;
+                lines.push(toStatementLine(all.length + lines.length + 1, {
                   date: dateCol >= 0 ? cells[dateCol] : row.line,
                   narration: cells[narCol],
                   debit,
                   credit,
-                }),
-              ),
-            );
+                }));
+              }
+            } else {
+              const wb: ParsedWorkbook = await readWorkbook(buf);
+              let parsedAny = false;
+              for (const sheetName of wb.statementSheets) {
+                const sheet = wb.sheets.find((s) => s.name === sheetName)!;
+                const cols = findStatementColumns(sheet);
+                if (!cols) continue;
+                const parsed = statementLinesFromSheet(sheet, cols);
+                if (parsed.length > 0) {
+                  lines.push(...parsed.map((l) => ({ ...l, id: all.length + lines.length + l.id })));
+                  parsedAny = true;
+                }
+              }
+              if (!parsedAny) throw new Error("no sheet looked like a statement (needs date, narration and debit/credit columns)");
+            }
+            if (lines.length === 0) throw new Error("no transaction rows came out of that file");
+            all.push(...lines);
+          } catch (err) {
+            failures.push(`${file.name}: ${err instanceof Error ? err.message : "unreadable"}`);
           }
-        } else {
-          const wb: ParsedWorkbook = await readWorkbook(buf);
-          const sheetName = wb.statementSheets[0];
-          if (!sheetName) throw new Error("No sheet looked like a statement (needs date, narration and debit/credit columns).");
-          const sheet = wb.sheets.find((s) => s.name === sheetName)!;
-          const cols = findStatementColumns(sheet);
-          if (!cols) throw new Error(`Could not map columns on sheet "${sheetName}".`);
-          lines = statementLinesFromSheet(sheet, cols);
         }
-        if (lines.length === 0) throw new Error("No transaction rows came out of that file.");
-        setStatement({ name: file.name, kind: fmtSize(file.size), status: "done", message: `${lines.length.toLocaleString()} statement lines` });
+        if (all.length === 0) throw new Error(failures[0] ?? "None of those files produced statement lines.");
+        const okCount = files.length - failures.length;
+        const summary = `${all.length.toLocaleString()} statement lines from ${okCount} file${okCount === 1 ? "" : "s"}`;
+        setStatement({
+          name: names.join(", "),
+          kind: "",
+          status: failures.length > 0 ? "done" : "done",
+          message: failures.length > 0 ? `${summary} (skipped: ${failures.join("; ")})` : summary,
+        });
         setData((prev) => {
-          const next = { statement: lines, payments: prev?.payments ?? [], statementName: file.name, paymentsName: prev?.paymentsName ?? "" };
+          const next = {
+            statement: all,
+            payments: prev?.payments ?? [],
+            statementFiles: names,
+            paymentsFiles: prev?.paymentsFiles ?? [],
+            statementName: names.join(", "),
+            paymentsName: prev?.paymentsName ?? "",
+          };
           if (next.payments.length > 0) onReady(next);
           return next;
         });
       } catch (e) {
-        setStatement({ name: file.name, kind: fmtSize(file.size), status: "error", message: e instanceof Error ? e.message : "Could not read that file." });
+        setStatement({ name: names.join(", "), kind: "", status: "error", message: e instanceof Error ? e.message : "Could not read those files." });
       }
     },
     [onReady],
   );
 
-  const parsePayments = useCallback(
-    async (file: File) => {
-      setPayments({ name: file.name, kind: fmtSize(file.size), status: "working", message: "" });
+  const parsePaymentsFiles = useCallback(
+    async (files: File[]) => {
+      const names = files.map((f) => f.name);
+      setPayments({ name: names.join(", "), kind: "", status: "working", message: "" });
       try {
-        const buf = await file.arrayBuffer();
-        const wb = await readWorkbook(buf);
         const rows: PaymentRow[] = [];
-        for (const name of wb.paymentSheets) {
-          const sheet = wb.sheets.find((s) => s.name === name)!;
-          const cols = findPaymentColumns(sheet);
-          if (cols) rows.push(...paymentsFromSheet(sheet, cols));
+        const failures: string[] = [];
+        for (const file of files) {
+          try {
+            const buf = await file.arrayBuffer();
+            const wb = await readWorkbook(buf);
+            let parsedAny = false;
+            for (const name of wb.paymentSheets) {
+              const sheet = wb.sheets.find((s) => s.name === name)!;
+              const cols = findPaymentColumns(sheet);
+              if (!cols) continue;
+              const parsed = paymentsFromSheet(sheet, cols);
+              if (parsed.length > 0) {
+                rows.push(...parsed.map((p) => ({ ...p, id: rows.length + p.id })));
+                parsedAny = true;
+              }
+            }
+            if (!parsedAny) throw new Error("no sheet looked like a payment list (needs a reference and an amount column)");
+          } catch (err) {
+            failures.push(`${file.name}: ${err instanceof Error ? err.message : "unreadable"}`);
+          }
         }
-        if (rows.length === 0) throw new Error("No sheet looked like a payment list (needs a reference and an amount column).");
-        setPayments({ name: file.name, kind: fmtSize(file.size), status: "done", message: `${rows.length.toLocaleString()} payments from ${wb.paymentSheets.join(", ")}` });
+        if (rows.length === 0) throw new Error(failures[0] ?? "None of those files produced payment rows.");
+        const okCount = files.length - failures.length;
+        const summary = `${rows.length.toLocaleString()} payments from ${okCount} file${okCount === 1 ? "" : "s"}`;
+        setPayments({ name: names.join(", "), kind: "", status: "done", message: failures.length > 0 ? `${summary} (skipped: ${failures.join("; ")})` : summary });
         setData((prev) => {
-          const next = { statement: prev?.statement ?? [], payments: rows, statementName: prev?.statementName ?? "", paymentsName: file.name };
+          const next = {
+            statement: prev?.statement ?? [],
+            payments: rows,
+            statementFiles: prev?.statementFiles ?? [],
+            paymentsFiles: names,
+            statementName: prev?.statementName ?? "",
+            paymentsName: names.join(", "),
+          };
           if (next.statement.length > 0) onReady(next);
           return next;
         });
       } catch (e) {
-        setPayments({ name: file.name, kind: fmtSize(file.size), status: "error", message: e instanceof Error ? e.message : "Could not read that file." });
+        setPayments({ name: names.join(", "), kind: "", status: "error", message: e instanceof Error ? e.message : "Could not read those files." });
       }
     },
     [onReady],
@@ -223,14 +271,14 @@ export function CalloverUploader({ onReady }: { onReady: (data: CallOverData) =>
     if (side === "statement") {
       setStatement(emptySide);
       setData((prev) => {
-        const next = prev ? { ...prev, statement: [], statementName: "" } : null;
+        const next = prev ? { ...prev, statement: [], statementFiles: [], statementName: "" } : null;
         if (next && next.payments.length === 0) return null;
         return next;
       });
     } else {
       setPayments(emptySide);
       setData((prev) => {
-        const next = prev ? { ...prev, payments: [], paymentsName: "" } : null;
+        const next = prev ? { ...prev, payments: [], paymentsFiles: [], paymentsName: "" } : null;
         if (next && next.statement.length === 0) return null;
         return next;
       });
@@ -242,8 +290,8 @@ export function CalloverUploader({ onReady }: { onReady: (data: CallOverData) =>
   return (
     <div>
       <div className="grid sm:grid-cols-2 gap-4">
-        <DropZone side="statement" state={statement} onFile={parseStatement} onClear={() => clear("statement")} />
-        <DropZone side="payments" state={payments} onFile={parsePayments} onClear={() => clear("payments")} />
+        <DropZone side="statement" state={statement} onFiles={parseStatementFiles} onClear={() => clear("statement")} />
+        <DropZone side="payments" state={payments} onFiles={parsePaymentsFiles} onClear={() => clear("payments")} />
       </div>
       <p className="text-xs text-ink-faint mt-3" aria-live="polite">
         {ready
