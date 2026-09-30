@@ -287,6 +287,12 @@ so iOS Safari never auto-zooms when an input takes focus. The investments
 detail table scrolls horizontally inside its own container rather than
 stretching the page.
 
+## Contributing and changes
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, codebase rules and how to
+open issues and pull requests. Release history lives in
+[CHANGELOG.md](CHANGELOG.md).
+
 ## Testing
 
 Unit tests cover: same-day and one-day ranges, month/year boundaries, leap
