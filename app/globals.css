@@ -104,7 +104,7 @@ html {
   animation: dm-fade 0.3s ease-out both;
 }
 
-/* Underline that draws itself in on hover — for quiet links. */
+/* Underline that draws itself in on hover, for quiet links. */
 .link-draw {
   position: relative;
 }
@@ -207,7 +207,7 @@ body {
   border-color: var(--color-line);
 }
 
-/* A hairline that draws itself across on mount — for section tops. */
+/* A hairline that draws itself across on mount, for section tops. */
 .rule-draw {
   transform-origin: left;
   animation: dm-grow-x 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -284,7 +284,7 @@ body {
 .stagger > *:nth-child(n + 11) { animation-delay: 0.33s; }
 
 /* ─── Ledger tables ─────────────────────────────────────────────────────
-   The reference tables are the product — they get a proper ledger
+   The reference tables are the product, so they get a proper ledger
    treatment: a ruled header band, zebra rows, generous cell padding,
    right-set tabular figures. No cards, no shadows; rules and rhythm. */
 

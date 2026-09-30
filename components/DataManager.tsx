@@ -130,7 +130,7 @@ export function DataManager() {
         <p className="text-xs text-ink-faint mt-3 max-w-prose">
           {isEdited
             ? "This browser currently uses locally edited data."
-            : "No local edits yet — every page is showing the shipped defaults."}
+            : "No local edits yet. Every page is showing the shipped defaults."}
         </p>
       </section>
     </div>

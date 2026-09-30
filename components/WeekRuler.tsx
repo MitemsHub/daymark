@@ -20,7 +20,7 @@ export function WeekRuler() {
     <section aria-labelledby="ruler-heading" className="reveal delay-1">
       <div className="flex items-baseline justify-between mb-3">
         <h2 id="ruler-heading" className="eyebrow">
-          The countdown — {year}
+          The countdown: {year}
         </h2>
         <p className="text-xs text-ink-faint hidden sm:block">
           Week 52 at the year's opening, down to 1; the final week is unnumbered.
@@ -63,8 +63,8 @@ export function WeekRuler() {
           <>
             Calendar week {timeline[currentIndex].week} of 53
             {timeline[currentIndex].descending !== null
-              ? ` — running ${timeline[currentIndex].week} of ${timeline.length} weeks elapsed.`
-              : " — the unnumbered week after the countdown."}
+              ? `, running ${timeline[currentIndex].week} of ${timeline.length} weeks elapsed.`
+              : ", the unnumbered week after the countdown."}
           </>
         ) : (
           "Today falls outside this year's weeks."

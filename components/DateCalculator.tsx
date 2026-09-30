@@ -49,13 +49,13 @@ export function DateCalculator() {
           <div>
             <div className="flex flex-wrap items-end gap-x-10 gap-y-4 pb-5 border-b hairline">
               <div>
-                <p className="eyebrow mb-1">Total days — inclusive</p>
+                <p className="eyebrow mb-1">Total days, inclusive</p>
                 <p className="display tnum text-6xl sm:text-7xl text-stamp stamp-in" aria-live="polite">
                   {result.inclusive}
                 </p>
               </div>
               <div>
-                <p className="eyebrow mb-1">Total days — exclusive</p>
+                <p className="eyebrow mb-1">Total days, exclusive</p>
                 <p className="display tnum text-3xl sm:text-4xl">{result.exclusive}</p>
               </div>
               <div>
@@ -113,7 +113,7 @@ export function DateCalculator() {
               </tbody>
               <tfoot>
                 <tr>
-                  <th scope="row" colSpan={2}>Total — inclusive</th>
+                  <th scope="row" colSpan={2}>Total, inclusive</th>
                   <td className="num text-stamp">{result.inclusive}</td>
                 </tr>
               </tfoot>

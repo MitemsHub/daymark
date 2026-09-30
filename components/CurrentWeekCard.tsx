@@ -42,7 +42,7 @@ export function CurrentWeekCard() {
       </p>
       <p className="tnum text-sm text-ink-soft mt-1">
         {isFinal
-          ? "After the countdown — no number on the calendar"
+          ? "After the countdown: no number on the calendar"
           : `${w.descending} weeks remaining · ${daysRemainingInWeek(now)} days left this week`}
       </p>
       <p className="text-xs text-ink-faint mt-1 tnum">

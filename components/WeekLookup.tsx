@@ -59,7 +59,7 @@ export function WeekLookup() {
             {[
               ["Date", formatLong(date!)],
               ["Calendar week", `Week ${byDate.week.week} of 53`],
-              ["Descending week", byDate.week.descending === null ? "Final week — unnumbered" : `Week ${byDate.week.descending}`],
+              ["Descending week", byDate.week.descending === null ? "Final week (unnumbered)" : `Week ${byDate.week.descending}`],
               [
                 "Week range",
                 `${formatLong(byDate.start)} – ${formatLong(byDate.end)}`,

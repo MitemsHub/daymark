@@ -11,7 +11,7 @@ export function GradeSection() {
   return (
     <div className="space-y-10">
       {isEdited && (
-        <StatusNote kind="info">Showing your locally edited grades — manage them on the Data page.</StatusNote>
+        <StatusNote kind="info">Showing your locally edited grades. Manage them on the Data page.</StatusNote>
       )}
       <GradeQuickLookup grades={rows} />
       <GradeTable grades={rows} />

@@ -11,7 +11,7 @@
 //    anniversary engine derives its own math from `anniversaryStartMonth` /
 //    `anniversaryEndMonth`; the text is for display.
 //  • A field that was not specified in the source stays `null`. The UI shows
-//    "Not specified" — never guess.
+//    "Not specified"; never guess.
 
 export interface InvestmentOption {
   /** Verbatim interest-type name, e.g. "MONTHLY", "ANNUAL BACKEND". */
@@ -183,7 +183,7 @@ export const investmentSeries: InvestmentSeries[] = [
     id: "coop-tripple-plan-2023",
     name: "COOP Investment Fund - Tripple Plan - 2023",
     startDate: "2023-01-01",
-    endDate: null, // not specified in the source — do not invent one
+    endDate: null, // not specified in the source; do not invent one
     anniversaryStartMonth: 1,
     anniversaryEndMonth: 12,
     options: [

@@ -13,7 +13,7 @@ export default function InvestmentsPage() {
       <header className="max-w-2xl reveal">
         <h1 className="display text-4xl sm:text-5xl mb-3">Investment Series</h1>
         <p className="text-ink-soft text-lg">
-          Rates, periods and anniversary calendars for every series — select one to open its details.
+          Rates, periods and anniversary calendars for every series. Select one to open its details.
         </p>
       </header>
       <InvestmentExplorer />

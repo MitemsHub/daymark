@@ -31,7 +31,7 @@ export function searchGrades(grades: MemberGrade[], query: string): MemberGrade[
 }
 
 /**
- * "given" preserves the source order — the co-op's seniority order, exactly
+ * "given" preserves the source order: the co-op's seniority order, exactly
  * as recorded. Other keys sort numerically/name-wise with a stable tiebreak
  * on the given order so equal values never shuffle the hierarchy.
  */

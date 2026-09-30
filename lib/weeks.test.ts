@@ -55,7 +55,7 @@ describe("the calendar convention itself", () => {
   });
 });
 
-describe("getWeekForDate — spot checks against the printed sheet (Jan 1 Thu)", () => {
+describe("getWeekForDate: spot checks against the printed sheet (Jan 1 Thu)", () => {
   it("2026 matches the wall calendar row for row", () => {
     const cases: [string, number, number | null][] = [
       ["2026-01-01", 1, 52],

@@ -97,7 +97,7 @@ export function InvestmentExplorer() {
 
       {isEdited && (
         <StatusNote kind="info">
-          Showing your locally edited series — manage them on the Data page.
+          Showing your locally edited series. Manage them on the Data page.
         </StatusNote>
       )}
 

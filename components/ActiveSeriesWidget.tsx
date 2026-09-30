@@ -19,7 +19,7 @@ export function ActiveSeriesWidget() {
     <div>
       <p className="eyebrow mb-1">Active investment series</p>
       <p className="display tnum text-4xl">
-        {today ? active.length : "—"}
+        {today ? active.length : "\u00A0"}
       </p>
       <p className="text-sm text-ink-soft mt-1">
         {today ? active.map((s) => s.name).join(" · ") : "Loading…"}

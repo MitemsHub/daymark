@@ -1,8 +1,8 @@
 // ─── Member grade & limits reference data ────────────────────────────────────
 //
 // Single source of truth for the Member Grade section. Values are transcribed
-// exactly from the source document — including the spelling "Assitant Director"
-// — so this table stays a faithful copy of the paper it came from.
+// exactly from the source document, including the spelling "Assitant Director",
+// so this table stays a faithful copy of the paper it came from.
 //
 // Amounts are in Naira (₦). A `0` means the source lists zero; do not "fix" it.
 

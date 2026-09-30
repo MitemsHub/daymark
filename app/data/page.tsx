@@ -14,7 +14,7 @@ export default function DataPage() {
         <h1 className="display text-4xl sm:text-5xl mb-3">Data</h1>
         <p className="text-ink-soft text-lg">
           Update rates, dates and limits right here. Changes save to this browser and flow
-          through every page — no code required.
+          through every page. No code required.
         </p>
         <p className="text-sm text-ink-faint mt-3 max-w-prose">
           Edits live only on this device (browser storage). Export a JSON backup before clearing

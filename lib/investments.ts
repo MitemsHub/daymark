@@ -8,7 +8,7 @@
 //
 // Anniversary numbering: anniversary window 1 is the first window that starts
 // on or after the series' start date (for a series starting mid-window, that
-// is the NEXT window). During the initial partial window the number is null —
+// is the NEXT window). During the initial partial window the number is null;
 // the UI shows "First year".
 
 import { differenceInCalendarDays } from "date-fns";

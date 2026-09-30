@@ -20,7 +20,7 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://daymark.mitemshub.com"),
   title: {
-    default: "Daymark — Date & Week Calculator + Co-op Reference",
+    default: "Daymark: Date & Week Calculator + Co-op Reference",
     template: "%s · Daymark",
   },
   description:
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     "member grades",
   ],
   openGraph: {
-    title: "Daymark — Date & Week Calculator",
+    title: "Daymark: Date & Week Calculator",
     description:
       "Inclusive/exclusive day counts, a descending week countdown, and private reference tables for investment series and member grades.",
     type: "website",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary",
-    title: "Daymark — Date & Week Calculator",
+    title: "Daymark: Date & Week Calculator",
     description:
       "Inclusive/exclusive day counts, a descending week countdown, and private reference tables.",
   },

@@ -22,7 +22,7 @@ export function CurrentWeekWidget() {
       <div>
         <p className="eyebrow mb-1">Current week</p>
         <div className="tnum text-4xl text-ink-faint" aria-hidden="true">
-          —
+          {"\u00A0"}
         </div>
       </div>
     );

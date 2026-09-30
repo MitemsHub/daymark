@@ -1,5 +1,5 @@
 // ─── Date arithmetic ─────────────────────────────────────────────────────────
-// Pure date calculation helpers. No React, no browser APIs — everything here
+// Pure date calculation helpers. No React, no browser APIs: everything here
 // is deterministic and unit-tested in lib/dates.test.ts.
 //
 // Conventions used across the app:
@@ -68,10 +68,10 @@ export function validateRange(startISO: string, endISO: string): string | null {
     s = parseISODate(startISO);
     e = parseISODate(endISO);
   } catch {
-    return "One of those dates doesn't exist on the calendar — check day and month.";
+    return "One of those dates doesn't exist on the calendar. Check day and month.";
   }
   if (e.getTime() === s.getTime()) {
-    return "Start and end are the same day. Inclusive count is 1; exclusive count is 0 — pick a later end date to see a full breakdown.";
+    return "Start and end are the same day. Inclusive count is 1; exclusive count is 0. Pick a later end date to see a full breakdown.";
   }
   if (e < s) return "The end date is before the start date. Swap them or pick a later end date.";
   return null;

@@ -115,7 +115,7 @@ export function GradeTable({ grades }: { grades: MemberGrade[] }) {
         </table>
         {visible.length === 0 && (
           <p role="status" className="py-6 text-sm text-ink-soft">
-            No grades match “{query}”.
+            No grades match "{query}".
           </p>
         )}
       </div>
@@ -143,7 +143,7 @@ export function GradeTable({ grades }: { grades: MemberGrade[] }) {
         })}
         {visible.length === 0 && (
           <li className="py-6 text-sm text-ink-soft" role="status">
-            No grades match “{query}”.
+            No grades match "{query}".
           </li>
         )}
       </ul>

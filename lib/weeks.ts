@@ -11,13 +11,13 @@
 //      Monday after the first Sunday; each later week follows in step.
 //   4. Week 53 is whatever remains: the Monday after Week 52's Sunday
 //      through December 31 (1–8 days). The calendar prints the row but
-//      leaves its WEEKS cell blank — it carries no countdown number.
+//      leaves its WEEKS cell blank. It carries no countdown number.
 //   5. The right-hand WEEKS column is therefore:
 //         descending = 53 − calendarWeek      (weeks 1–52; 53 stays blank)
-//      so Week 1 → 52, Week 40 → 13, Week 52 → 1, Week 53 → —.
+//      so Week 1 → 52, Week 40 → 13, Week 52 → 1, Week 53 → blank.
 //
 // Useful consequences:
-//   - Every date maps to a week of its OWN calendar year — no ISO spillover.
+//   - Every date maps to a week of its OWN calendar year, no ISO spillover.
 //     January 1 is always Week 1; December 31 is always Week 53.
 //   - The descending number is exactly the number of numbered weeks
 //     remaining, current week included. Week 53 is the countdown's aftermath.
@@ -26,7 +26,7 @@
 //     year of the same leap pattern: common years end Week 52 on Dec 27,
 //     leap years on Dec 26.
 //
-// Reference calendar (Jan 1 on a Thursday — the printed sheet, and 2026):
+// Reference calendar (Jan 1 on a Thursday: the printed sheet, and 2026):
 //   Week 1  = Jan 1 – Jan 4    → 52
 //   Week 2  = Jan 5 – Jan 11   → 51
 //   Week 7  = Feb 9 – Feb 15   → 46
@@ -45,14 +45,14 @@ import {
   parseISO,
 } from "date-fns";
 
-/** Calendar week 53 — the final partial week, printed without a number. */
+/** Calendar week 53: the final partial week, printed without a number. */
 export const FINAL_WEEK = 53;
 
 /** Weeks in every calendar year under this convention (never 52). */
 export const WEEKS_PER_YEAR = 53;
 
 export interface WeekRef {
-  /** The date's own calendar year — weeks never spill across years. */
+  /** The date's own calendar year. Weeks never spill across years. */
   year: number;
   /** Calendar week 1–53 (week 53 is the unnumbered final stub). */
   week: number;
@@ -157,7 +157,7 @@ export interface TimelineWeek extends WeekRef {
   end: Date;
 }
 
-/** All 53 calendar weeks of `year`, in calendar order — which is countdown order: 52, 51, …, 1, then the unnumbered stub. */
+/** All 53 calendar weeks of `year` in calendar order, which is countdown order: 52, 51, ... 1, then the unnumbered stub. */
 export function getYearTimeline(year: number): TimelineWeek[] {
   return Array.from({ length: WEEKS_PER_YEAR }, (_, i) => {
     const { start, end } = getWeekRangeByNumber(year, i + 1);
@@ -169,7 +169,7 @@ export function getYearTimeline(year: number): TimelineWeek[] {
 /**
  * Look up a countdown week of `year` by its descending number (1–52).
  * Week 13 of 2026 → Sep 28 – Oct 4. Week 53 is unnumbered and cannot be
- * looked up here — use getFinalWeekOfYear.
+ * looked up here; use getFinalWeekOfYear.
  */
 export function getWeekByDescendingNumber(
   year: number,
@@ -195,7 +195,7 @@ export function daysRemainingInWeek(date: Date): number {
 }
 
 /**
- * Numbered weeks remaining in the year, current week included — i.e. the
+ * Numbered weeks remaining in the year, current week included, i.e. the
  * descending number. Week 53 has no number; only itself remains, so this
  * returns 1 there (the UI shows the "final week" state instead).
  */

@@ -13,7 +13,7 @@ export default function GradesPage() {
       <header className="max-w-2xl reveal">
         <h1 className="display text-4xl sm:text-5xl mb-3">Member Grade</h1>
         <p className="text-ink-soft text-lg">
-          Credit, contribution and limit reference for every grade — values as recorded in the source document.
+          Credit, contribution and limit reference for every grade, values as recorded in the source document.
         </p>
       </header>
       <GradeSection />

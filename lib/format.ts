@@ -1,13 +1,13 @@
 // ─── Formatting & small utilities ────────────────────────────────────────────
 
-/** ₦2,000,000 — Naira, grouping commas, never decimals. */
+/** ₦2,000,000: Naira, grouping commas, never decimals. */
 export function formatNaira(n: number): string {
   return `₦${n.toLocaleString("en-NG")}`;
 }
 
-/** ₦2,000,000 — Naira, grouping commas, never decimals. Zeros stay ₦0: the
+/** ₦2,000,000: Naira, grouping commas, never decimals. Zeros stay ₦0: the
  * source lists them, and "no access" is a real value. Use "Not specified"
- * text (not an em dash) for genuinely missing fields. */
+ * text (not a dash) for genuinely missing fields. */
 export function formatLimit(n: number): string {
   return formatNaira(n);
 }
