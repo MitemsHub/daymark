@@ -4,7 +4,7 @@ export const dynamic = "force-static";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://mitemshub.github.io/daymark";
-  const routes = ["", "/week", "/investments", "/grades"];
+  const routes = ["", "/week", "/callover", "/investments", "/grades"];
   return routes.map((r) => ({
     url: `${base}${r}`,
     lastModified: new Date(),

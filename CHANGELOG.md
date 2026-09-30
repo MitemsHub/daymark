@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Call Over
+
+- New tab for the daily payment reconciliation. Upload a bank statement and
+  a payment list (Excel, CSV or PDF; Zenith and GTB layouts auto-detected)
+  and every payment is classified against the statement: paid, reversed,
+  partial reversal, double posted, partial payment, or not found, each with
+  its raw mention count in brackets, as in the spreadsheet process this
+  replaces.
+- Reference matching follows the call-over rule on any bank: ZB/A/006570/5
+  matches ZBA0065705 but never ZBA00657050.
+- Statement debits that no payment claims are listed separately.
+- A4 printable report with the evidence lines under each payment.
+- New dependencies: SheetJS (vendored tarball from the official CDN) and
+  pdfjs-dist, both loaded only by this tab.
+- Engine validated against real workbooks: the engine's mention counts
+  match the spreadsheet formula's verdicts on all 578 payment rows of the
+  reference call-over file.
+
 ## 1.0.0 (30 September 2026)
 
 First release. Everything below ships in it.
@@ -49,6 +69,5 @@ First release. Everything below ships in it.
   generated from one drawing.
 - Responsive layout, iOS zoom-proof inputs, reduced-motion support.
 - Automatic deployment to GitHub Pages through GitHub Actions, with the
-  base-path aware static build.
-- 61 unit tests, strict TypeScript, no runtime dependencies beyond Next.js,
-  React and date-fns.
+  base-path aware static build.- 61 unit tests, strict TypeScript, no runtime dependencies beyond Next.js,
+React and date-fns.

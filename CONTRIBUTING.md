@@ -17,7 +17,7 @@ npm run dev        # http://localhost:3000
 Before you open a pull request, run all three:
 
 ```bash
-npm test           # 61 unit tests
+npm test           # 83 unit tests
 npm run typecheck  # strict TypeScript, no errors allowed
 npm run build      # production build must pass
 ```

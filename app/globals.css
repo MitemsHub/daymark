@@ -413,3 +413,51 @@ table.ledger {
     transition: none !important;
   }
 }
+
+/* ---- Call Over print report -------------------------------------------
+   The printable call-over: A4-friendly, app chrome hidden, evidence tables
+   kept intact. Print is the deliverable, so it gets its own rules. */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  /* App chrome that never prints. */
+  nav,
+  footer,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .ledger {
+    font-size: 10.5px;
+  }
+
+  .ledger th,
+  .ledger td {
+    border-bottom: 0.5pt solid #999;
+  }
+
+  /* Keep evidence rows from splitting across pages. */
+  tr {
+    break-inside: avoid;
+  }
+
+  section {
+    break-inside: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+}

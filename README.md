@@ -121,6 +121,29 @@ On your phone, with the live site:
   image libraries) so the favicon, manifest icons and apple-touch icon all
   come from one drawing of the daymark mark.
 
+### Call Over
+
+The daily payment reconciliation, built from the printed call-over process.
+Upload the bank statement and the payment list (.xls, .xlsx, .csv or PDF;
+Zenith, GTB and other formats are detected automatically) and every payment
+is checked against the statement:
+
+- **Paid** went through and stayed. **Reversed** means the money came back
+  (partial if only some of it did). **Double posted** means the statement
+  charged the payment twice. **Partial payment** means a smaller amount left.
+  **Not found** means the statement never saw the reference.
+- Each payment shows its raw mention count in brackets, in the same
+  "Found N times" form as the Excel process this replaces.
+- Matching follows the call-over reference rule: ZB/A/006570/5 matches
+  ZBA0065705 but never ZBA00657050, on any bank's statement.
+- The charge threshold (default 10,000 naira) teaches the tool that larger
+  payments normally appear twice (payment line plus a charge line).
+- The report also lists **statement debits no payment claims**, the audit
+  the spreadsheet cannot do.
+- Everything runs in the browser; the statement never leaves the machine.
+  The report prints on A4, problems first, with the evidence lines under
+  each payment.
+
 ### Data page (edit without code)
 
 Rates change. The Data page lets you change them without touching code:
@@ -266,7 +289,7 @@ GitHub Actions picks the rest up from the script.
 ## Project structure
 
 ```
-app/                 routes (home, week, investments, grades, data) + SEO + manifest
+app/                 routes (home, week, callover, investments, grades, data) + SEO + manifest
 components/          UI components, one concern each
 lib/                 pure calculation engine + tests (no UI imports)
   dates.ts           + Today / − Today counts, breakdown, reverse calc
