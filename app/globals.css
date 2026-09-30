@@ -1,0 +1,394 @@
+@import "tailwindcss";
+
+/* ─── Daymark design tokens ───────────────────────────────────────────────
+   "The teller's instrument": paper ground, ink text, one rust stamp color
+   reserved for the current week / active state, mono figures everywhere
+   a number is measured. Type: Archivo (voice) + IBM Plex Mono (figures). */
+
+@theme {
+  --font-sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+
+  --color-paper: #f7f5f0;
+  --color-paper-sunken: #efede6;
+  --color-ink: #16302b;
+  --color-ink-soft: #4d6360;
+  --color-ink-faint: #8ba39e;
+  --color-line: #d9d4c8;
+  --color-stamp: #b3491d;
+  --color-stamp-deep: #8f3813;
+  --color-stamp-wash: #f3e2d8;
+  --color-leaf: #2e6b4f;
+  --color-leaf-wash: #e2ede7;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ─── Motion ────────────────────────────────────────────────────────────
+   A quiet instrument still breathes: page-load reveals, a stagger that
+   reads like ruled paper filling in, emphasis that eases rather than
+   snaps. Everything below is CSS-only and fully disabled under
+   prefers-reduced-motion (block at the end of this file). */
+
+@keyframes dm-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes dm-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dm-stamp {
+  0% {
+    opacity: 0;
+    transform: scale(1.35);
+    filter: blur(2px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.96);
+    filter: blur(0);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes dm-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Page-load reveal: sections drift up into place in reading order. */
+.reveal {
+  animation: dm-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.reveal.delay-1 {
+  animation-delay: 0.08s;
+}
+
+.reveal.delay-2 {
+  animation-delay: 0.16s;
+}
+
+.reveal.delay-3 {
+  animation-delay: 0.24s;
+}
+
+/* Big measured numbers arrive like a stamp hitting paper. */
+.stamp-in {
+  animation: dm-stamp 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+/* Results that swap as inputs change: soft cross-fade, never a flash. */
+.swap-in {
+  animation: dm-fade 0.3s ease-out both;
+}
+
+/* Underline that draws itself in on hover — for quiet links. */
+.link-draw {
+  position: relative;
+}
+
+.link-draw::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.link-draw:hover::after,
+.link-draw:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* Ledger rows fill in like a ruled page being written. */
+@keyframes dm-row {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ledger tbody tr {
+  animation: dm-row 0.35s ease-out both;
+}
+
+.ledger tbody tr:nth-child(1) { animation-delay: 0.02s; }
+.ledger tbody tr:nth-child(2) { animation-delay: 0.04s; }
+.ledger tbody tr:nth-child(3) { animation-delay: 0.06s; }
+.ledger tbody tr:nth-child(4) { animation-delay: 0.08s; }
+.ledger tbody tr:nth-child(5) { animation-delay: 0.1s; }
+.ledger tbody tr:nth-child(6) { animation-delay: 0.12s; }
+.ledger tbody tr:nth-child(7) { animation-delay: 0.14s; }
+.ledger tbody tr:nth-child(8) { animation-delay: 0.16s; }
+.ledger tbody tr:nth-child(9) { animation-delay: 0.18s; }
+.ledger tbody tr:nth-child(10) { animation-delay: 0.2s; }
+.ledger tbody tr:nth-child(n + 11) { animation-delay: 0.22s; }
+
+/* Nav underline sweep on the active page. */
+@keyframes dm-nav {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Focus: a 2px rust ring is the only decoration interactions get. */
+:focus-visible {
+  outline: 2px solid var(--color-stamp);
+  outline-offset: 2px;
+}
+
+/* Tabular figures for every measured value. */
+.tnum {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Display headings: tight, slightly condensed, confident. */
+.display {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+/* Small uppercase eyebrow label. */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+}
+
+/* Sections are separated by hairlines, not card chrome. */
+.hairline {
+  border-color: var(--color-line);
+}
+
+/* A hairline that draws itself across on mount — for section tops. */
+.rule-draw {
+  transform-origin: left;
+  animation: dm-grow-x 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Smooth expand/collapse: grid-rows trick, no height measuring. */
+.expand {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.expand.open {
+  grid-template-rows: 1fr;
+}
+
+.expand > .expand-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Nav links: the active page's underline sweeps in and stays. */
+.nav-link {
+  position: relative;
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.2rem;
+  height: 2px;
+  background: var(--color-stamp);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nav-link[aria-current="page"]::after {
+  transform: scaleX(1);
+}
+
+/* Gentle heartbeat on the ruler's today marker. */
+@keyframes dm-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.pulse {
+  animation: dm-pulse 2.4s ease-in-out infinite;
+}
+
+/* Stagger groups: children fill in one after another on mount. */
+.stagger > * {
+  animation: dm-row 0.4s ease-out both;
+}
+
+.stagger > *:nth-child(1) { animation-delay: 0.03s; }
+.stagger > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger > *:nth-child(3) { animation-delay: 0.09s; }
+.stagger > *:nth-child(4) { animation-delay: 0.12s; }
+.stagger > *:nth-child(5) { animation-delay: 0.15s; }
+.stagger > *:nth-child(6) { animation-delay: 0.18s; }
+.stagger > *:nth-child(7) { animation-delay: 0.21s; }
+.stagger > *:nth-child(8) { animation-delay: 0.24s; }
+.stagger > *:nth-child(9) { animation-delay: 0.27s; }
+.stagger > *:nth-child(10) { animation-delay: 0.3s; }
+.stagger > *:nth-child(n + 11) { animation-delay: 0.33s; }
+
+/* ─── Ledger tables ─────────────────────────────────────────────────────
+   The reference tables are the product — they get a proper ledger
+   treatment: a ruled header band, zebra rows, generous cell padding,
+   right-set tabular figures. No cards, no shadows; rules and rhythm. */
+
+table.ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.ledger thead th {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+  text-align: left;
+  padding: 0.75rem 1rem;
+  background: var(--color-paper-sunken);
+  border-top: 2px solid var(--color-ink);
+  border-bottom: 1px solid var(--color-ink);
+  white-space: nowrap;
+}
+
+.ledger tbody td,
+.ledger tbody th {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--color-line);
+  vertical-align: top;
+}
+
+.ledger tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.ledger tbody tr:hover {
+  background: #ffffff;
+}
+
+.ledger tbody th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+/* Right-set figures: money, counts, rates. */
+.ledger .num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ledger .rank {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--color-ink-faint);
+  white-space: nowrap;
+}
+
+.ledger tfoot th,
+.ledger tfoot td {
+  padding: 0.8rem 1rem;
+  border-top: 2px solid var(--color-ink);
+  font-weight: 700;
+  background: transparent;
+}
+
+/* Compact variant for the month breakdown. */
+.ledger--compact thead th {
+  padding: 0.5rem 0.625rem;
+  border-top-width: 1px;
+}
+
+.ledger--compact tbody td,
+.ledger--compact tbody th,
+.ledger--compact tfoot th,
+.ledger--compact tfoot td {
+  padding: 0.5rem 0.625rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  .reveal,
+  .stamp-in,
+  .swap-in,
+  .stagger > *,
+  .ledger tbody tr {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .pulse {
+    animation: none !important;
+  }
+  .expand {
+    transition: none !important;
+  }
+}
