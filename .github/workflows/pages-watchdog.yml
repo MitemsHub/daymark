@@ -1,0 +1,112 @@
+name: Pages watchdog
+
+# The GitHub Pages source setting has flipped back to "Deploy from a branch"
+# more than once, and branch mode then serves Jekyll's README page instead of
+# the real app. This watchdog checks the live site on a schedule, detects that
+# takeover, and republishes the site from the last successful build so the app
+# comes back without anyone logging in.
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-watchdog
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      taken_over: ${{ steps.detect.outputs.taken_over }}
+    steps:
+      - name: Check the live site
+        id: detect
+        run: |
+          set -euo pipefail
+          code=$(curl -s -o live.html -w "%{http_code}" -m 30 https://mitemshub.github.io/daymark/ || true)
+          echo "HTTP $code"
+          if [ "$code" != "200" ]; then
+            echo "taken_over=true" >> "$GITHUB_OUTPUT"
+            echo "reason=http_$code" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          title=$(grep -o "<title>[^<]*</title>" live.html | head -1 || true)
+          echo "title: $title"
+          if printf '%s' "$title" | grep -q "Date &amp; Week Calculator"; then
+            echo "taken_over=false" >> "$GITHUB_OUTPUT"
+            echo "reason=ok" >> "$GITHUB_OUTPUT"
+          else
+            echo "taken_over=true" >> "$GITHUB_OUTPUT"
+            echo "reason=title_mismatch" >> "$GITHUB_OUTPUT"
+          fi
+
+  republish:
+    needs: check
+    if: needs.check.outputs.taken_over == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    steps:
+      - name: Log the takeover
+        run: echo "Live site reports a Jekyll takeover (${{ needs.check.outputs.reason }}). Republishing."
+
+      - name: Make the Pages source use GitHub Actions
+        # The setting can only be flipped here because it needs the repo
+        # token; it has flipped back to "Deploy from a branch" by hand.
+        run: |
+          set -euo pipefail
+          status=$(curl -s -o /dev/null -w "%{http_code}" -X PUT \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pages" \
+            -d '{"build_type":"workflow"}')
+          echo "Pages build_type update HTTP $status"
+          [ "$status" = "204" ] || echo "warning: build_type update returned $status, continuing"
+
+      - name: Dispatch the deploy workflow
+        run: |
+          set -euo pipefail
+          status=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/deploy.yml/dispatches" \
+            -d '{"ref":"main"}')
+          echo "workflow dispatch HTTP $status"
+          [ "$status" = "204" ]
+
+      - name: Wait for the deploy to finish
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 40); do
+            sleep 30
+            run=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/workflows/deploy.yml/runs?event=workflow_dispatch&per_page=1")
+            status=$(printf '%s' "$run" | grep -o '"status": *"[^"]*"' | head -1 | sed 's/.*"status": *"//;s/"//')
+            conclusion=$(printf '%s' "$run" | grep -o '"conclusion": *"[^"]*"' | head -1 | sed 's/.*"conclusion": *"//;s/"//')
+            echo "attempt $i: status=$status conclusion=$conclusion"
+            [ "$status" = "completed" ] && exit 0
+          done
+          echo "Deploy did not finish in 20 minutes" >&2
+          exit 1
+
+      - name: Verify the site came back
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 10); do
+            sleep 15
+            title=$(curl -s -m 30 https://mitemshub.github.io/daymark/ | grep -o "<title>[^<]*</title>" | head -1 || true)
+            echo "title: $title"
+            if printf '%s' "$title" | grep -q "Date &amp; Week Calculator"; then
+              echo "Site restored."
+              exit 0
+            fi
+          done
+          echo "Site still not serving the app after the republish" >&2
+          exit 1

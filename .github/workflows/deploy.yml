@@ -29,6 +29,21 @@ jobs:
         run: npm test
       - name: Build static site
         run: npm run build:pages
+      - name: Publish gh-pages branch (branch-mode safety net)
+        # The Pages source setting keeps flipping back to "Deploy from a
+        # branch". A gh-pages branch is the branch that setting expects, so
+        # branch mode serves this exact build instead of a Jekyll README.
+        if: ${{ !cancelled() }}
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./out
+          force_orphan: true
+          keep_files: false
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com
+          commit_message: ${{ github.event.head_commit.message }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out

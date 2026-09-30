@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+Nothing yet.
+
+## 1.1.0 (30 September 2026)
+
 ### Call Over
 
 - New tab for the daily payment reconciliation. Upload a bank statement and
@@ -12,13 +16,31 @@
   replaces.
 - Reference matching follows the call-over rule on any bank: ZB/A/006570/5
   matches ZBA0065705 but never ZBA00657050.
-- Statement debits that no payment claims are listed separately.
+- Cross-check on every paid and short paid verdict: the amount and the
+  beneficiary name must both appear in the statement narration. A miss adds
+  a note to the row; it never changes the status.
+- Several statement or payment files can be uploaded at once and are merged,
+  with per-file failures reported and skipped. The results page shows a
+  per-statement bank breakdown, a CSV export, and a Clear now button next to
+  the one-hour self-clear timer.
+- Section names follow the call-over sheet: No payment to compare with the
+  following (statement debits no payment claims, 5 rows shown with a Show
+  all button) and Successful payments.
+- The charge threshold input is gone; the engine decides from the evidence.
 - A4 printable report with the evidence lines under each payment.
 - New dependencies: SheetJS (vendored tarball from the official CDN) and
   pdfjs-dist, both loaded only by this tab.
 - Engine validated against real workbooks: the engine's mention counts
   match the spreadsheet formula's verdicts on all 578 payment rows of the
   reference call-over file.
+
+### Platform
+
+- Deploys publish the same build to a gh-pages branch as a safety net, so
+  the Pages source setting landing on "Deploy from a branch" serves the app
+  instead of a Jekyll README page.
+- A scheduled Pages watchdog checks the live site every 30 minutes and
+  republishes it if the Jekyll page takes over.
 
 ## 1.0.0 (30 September 2026)
 

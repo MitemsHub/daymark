@@ -6,8 +6,8 @@
 
 A date and week calculator built for day-to-day co-op work. It counts days
 between dates, runs a descending week countdown that matches the printed
-wall calendar, and keeps the investment series and member grade tables one
-click away.
+wall calendar, keeps the investment series and member grade tables one
+click away, and runs the daily Call Over reconciliation.
 
 No sign-in, no server, no tracking. Your data edits stay in your browser.
 
@@ -130,7 +130,7 @@ is checked against the statement:
 
 - **Paid** went through and stayed. **Reversed** means the money came back
   (partial if only some of it did). **Double posted** means the statement
-  charged the payment twice. **Partial payment** means a smaller amount left.
+  charged the payment twice. **Short paid** means a smaller amount left.
   **Not found** means the statement never saw the reference.
 - Each payment shows its raw mention count in brackets, in the same
   "Found N times" form as the Excel process this replaces.
@@ -138,8 +138,9 @@ is checked against the statement:
   ZBA0065705 but never ZBA00657050, on any bank's statement.
 - The charge threshold (default 10,000 naira) teaches the tool that larger
   payments normally appear twice (payment line plus a charge line).
-- The report also lists **statement debits no payment claims**, the audit
-  the spreadsheet cannot do.
+- The report also lists **no payment to compare with the following**, the
+  statement debits no payment claims, the audit the spreadsheet cannot do.
+  The list shows 5 rows by default with a Show all button.
 - Everything runs in the browser; the statement never leaves the machine.
   The report prints on A4, problems first, with the evidence lines under
   each payment.
@@ -265,6 +266,18 @@ The repo deploys to Pages by itself. On every push to `main`, a GitHub Actions
 workflow runs the tests, builds a static export and publishes it. Nothing to
 configure once Pages is on: the live site is
 [https://mitemshub.github.io/daymark/](https://mitemshub.github.io/daymark/).
+
+**One setting to check:** Settings → Pages → Source must be **GitHub Actions**.
+If it reads "Deploy from a branch", the site can end up serving a Jekyll page
+instead of the app. Two safeguards cover that case:
+
+- Every deploy also publishes the same build to the `gh-pages` branch. If the
+  source setting ever lands on branch mode, it serves that branch, which is
+  the real app, not a README.
+- A scheduled watchdog (`pages-watchdog.yml`) checks the live site every 30
+  minutes. If it finds the Jekyll page or a broken route, it flips the source
+  setting back to GitHub Actions and re-runs the deploy, then verifies the
+  site is serving the app again. Runs are visible in the Actions tab.
 
 The Pages build differs from a normal build in two ways: every URL carries the
 `/daymark` base path (Pages serves project sites from a subfolder), and the

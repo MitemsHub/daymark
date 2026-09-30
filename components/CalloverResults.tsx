@@ -117,6 +117,7 @@ export function CalloverResults({
   expiresAt: number | null;
 }) {
   const [showPaid, setShowPaid] = useState(false);
+  const [showAllOrphans, setShowAllOrphans] = useState(false);
   const [query, setQuery] = useState("");
   const [now, setNow] = useState(() => Date.now());
 
@@ -259,12 +260,23 @@ export function CalloverResults({
         </section>
       )}
 
-      {/* Unexplained debits */}
+      {/* Unexplained debits: short list by default, full list behind Show all */}
       {unexplainedDebits.length > 0 && (
         <section className="mb-6" aria-labelledby="orphans-heading">
-          <h3 id="orphans-heading" className="eyebrow mb-2">
-            Statement debits no payment claims ({unexplainedDebits.length}, {naira(totals.unexplainedDebitTotal)})
-          </h3>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <h3 id="orphans-heading" className="eyebrow">
+              No payment to compare with the following ({unexplainedDebits.length}, {naira(totals.unexplainedDebitTotal)})
+            </h3>
+            {unexplainedDebits.length > 5 && (
+              <button
+                type="button"
+                onClick={() => setShowAllOrphans((s) => !s)}
+                className="text-sm text-ink-soft hover:text-stamp transition-colors shrink-0"
+              >
+                {showAllOrphans ? "Hide" : `Show all ${unexplainedDebits.length}`}
+              </button>
+            )}
+          </div>
           <div className="overflow-x-auto">
             <table className="ledger ledger--compact">
               <thead>
@@ -275,20 +287,13 @@ export function CalloverResults({
                 </tr>
               </thead>
               <tbody>
-                {unexplainedDebits.slice(0, 50).map((l) => (
+                {(showAllOrphans ? unexplainedDebits : unexplainedDebits.slice(0, 5)).map((l) => (
                   <tr key={l.id}>
                     <td className="tnum whitespace-nowrap">{l.dateISO || "\u00a0"}</td>
                     <td className="text-xs">{l.narration}</td>
                     <td className="num">{naira(l.debit)}</td>
                   </tr>
                 ))}
-                {unexplainedDebits.length > 50 && (
-                  <tr>
-                    <td colSpan={3} className="text-xs text-ink-faint">
-                      ...and {unexplainedDebits.length - 50} more.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
@@ -323,18 +328,18 @@ export function CalloverResults({
         )}
       </section>
 
-      {/* Clean payments: always rendered, screen-only users can collapse it */}
+      {/* Successful payments: always rendered, screen-only users can collapse it */}
       <section aria-labelledby="paid-heading" className="print:mt-6">
         <div className="flex items-center justify-between mb-2 print:hidden">
           <h3 id="paid-heading" className="eyebrow">
-            Clean payments ({paid.length})
+            Successful payments ({paid.length})
           </h3>
           <button type="button" onClick={() => setShowPaid((s) => !s)} className="text-sm text-ink-soft hover:text-stamp transition-colors">
             {showPaid ? "Hide" : "Show"}
           </button>
         </div>
         <h3 id="paid-heading" className="eyebrow mb-2 hidden print:block">
-          Clean payments ({paid.length})
+          Successful payments ({paid.length})
         </h3>
         <div className={showPaid ? "" : "hidden print:block"}>
           <table className="ledger ledger--compact">
