@@ -37,7 +37,7 @@ async function upload(page: Page, statements: string[], payments: string[]) {
 
 async function runCallOver(page: Page) {
   await page.getByRole("button", { name: "Run call-over" }).click();
-  await expect(page.getByRole("heading", { name: /No payment to compare with the following|Payments to look at|Successful payments/ }).first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: /Please Upload this Payments|Payments that did Failed\/Invalid|Successful payments/ }).first()).toBeVisible({ timeout: 20_000 });
 }
 
 test("smoke: statuses, tiles and headings from fixture CSVs", async ({ page }) => {
@@ -55,7 +55,7 @@ test("smoke: statuses, tiles and headings from fixture CSVs", async ({ page }) =
   await expect(page.getByRole("timer")).toHaveCount(2);
 
   // Problems table: one double posted and two reversed, with mention counts.
-  await expect(page.getByRole("heading", { name: "Payments to look at (3)" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Payments that did Failed/Invalid (3)" })).toBeVisible();
   await expect(page.getByRole("button", { name: /DALU EZE 12,000\.00 Double posted \(Found 2 times\)/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /BELLO UMARU 18,000\.00 Reversed \(Found 1 time\)/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /EFE IGBA 9,000\.00 Reversed \(Found 2 times\)/ })).toBeVisible();
@@ -72,7 +72,7 @@ test("smoke: statuses, tiles and headings from fixture CSVs", async ({ page }) =
   await expect(page.getByRole("button", { name: "Hide", exact: true })).toBeVisible();
 
   // The stamp duty charge line must never surface as an orphan
-  await expect(page.getByRole("heading", { name: /No payment to compare with the following/ })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: /Please Upload this Payments/ })).toHaveCount(0);
 });
 
 test("smoke: show-all toggle reveals every orphan", async ({ page }) => {
@@ -86,7 +86,7 @@ test("smoke: show-all toggle reveals every orphan", async ({ page }) => {
   await runCallOver(page);
 
   const orphans = page.locator('section[aria-labelledby="orphans-heading"]');
-  await expect(orphans.getByRole("heading", { name: "No payment to compare with the following (12, 78,000.00)" })).toBeVisible();
+  await expect(orphans.getByRole("heading", { name: "Please Upload this Payments (12, 78,000.00)" })).toBeVisible();
 
   // Collapsed: 5 rows of 12, button says Show all 12.
   await expect(orphans.getByRole("button", { name: "Show all 12" })).toBeVisible();
@@ -124,7 +124,7 @@ test("smoke: GAPS vendor payment exports parse and run against a GT statement", 
 
   // No payment error, no silent drop: all four classify.
   await expect(page.getByText(/no sheet looked like a payment list/)).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Payments to look at (4)" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Payments that did Failed/Invalid (4)" })).toBeVisible();
   await expect(page.getByRole("button", { name: /GTB\/A\/008848\/1 .*Not found/ })).toBeVisible();
 
   // The Giwa payment gets a probable match on the real transport debit.
@@ -150,14 +150,14 @@ test("smoke: First Bank vendor payment exports match by reference inside the nar
   // All four references were found on the statement: three straight Paid
   // and one Paid whose stamp duty line shares the reference.
   await expect(page.getByText(/no sheet looked like a payment list/)).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Payments to look at (0)" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Payments that did Failed/Invalid (0)" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Successful payments (4)" })).toBeVisible();
   await page.getByRole("button", { name: "Show", exact: true }).click();
   await expect(page.getByText("ABUBAKAR MANSIRBALELE")).toBeVisible();
   await expect(page.getByText("DIDIGU CHIZOBAEMMANUELLA")).toBeVisible();
 
   // The unrelated 75,000 debit is the only orphan.
-  await expect(page.getByRole("heading", { name: /No payment to compare with the following \(1, 75,000\.00\)/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Please Upload this Payments \(1, 75,000\.00\)/ })).toBeVisible();
 });
 
 test("smoke: session restores on reload and Clear now wipes it", async ({ page }) => {
@@ -165,7 +165,7 @@ test("smoke: session restores on reload and Clear now wipes it", async ({ page }
 
   await upload(page, ["callover-smoke-statement.csv"], ["callover-smoke-payments.csv"]);
   await runCallOver(page);
-  await expect(page.getByRole("heading", { name: "Payments to look at (3)" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Payments that did Failed/Invalid (3)" })).toBeVisible();
 
   // A reload must restore the session: the run button comes back enabled
   // from the stored files (results are never persisted, only the inputs).
@@ -174,7 +174,7 @@ test("smoke: session restores on reload and Clear now wipes it", async ({ page }
   await expect(run).toBeEnabled({ timeout: 15_000 });
   await expect(page.getByRole("timer")).toHaveCount(1);
   await run.click();
-  await expect(page.getByRole("heading", { name: "Payments to look at (3)" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: "Payments that did Failed/Invalid (3)" })).toBeVisible({ timeout: 20_000 });
 
   // Clear now wipes the session: back to the empty uploader, and storage
   // holds no session, so a further reload cannot resurrect anything.

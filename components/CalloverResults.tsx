@@ -152,6 +152,9 @@ export function CalloverResults({
   const [showPaid, setShowPaid] = useState(false);
   const [showAllOrphans, setShowAllOrphans] = useState(false);
   const [query, setQuery] = useState("");
+  // Which section a single-table print is targeting, or null for the full
+  // report. While set, print CSS hides every other part of the app.
+  const [printSection, setPrintSection] = useState<"problems" | "orphans" | "paid" | null>(null);
 
   const { verdicts, unexplainedDebits, totals } = result;
 
@@ -172,8 +175,29 @@ export function CalloverResults({
 
   const runDate = useMemo(() => new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }), []);
 
+  /**
+   * Print one section alone: tag the body and the root, let print CSS hide
+   * everything else, then clean up when the dialog closes.
+   */
+  function printSingle(section: "problems" | "orphans" | "paid") {
+    setPrintSection(section);
+    // Let the re-render land before the print snapshot is taken.
+    setTimeout(() => {
+      document.body.classList.add("print-one");
+      const done = () => {
+        document.body.classList.remove("print-one");
+        setPrintSection(null);
+        window.removeEventListener("afterprint", done);
+      };
+      window.addEventListener("afterprint", done);
+      window.print();
+      // Safety net for browsers that never fire afterprint.
+      setTimeout(done, 60_000);
+    }, 80);
+  }
+
   return (
-    <div>
+    <div data-results-root data-print-section={printSection ?? undefined}>
       {/* Printable header */}
       <div className="hidden print:block mb-6">
         <h1 className="text-2xl font-semibold">Call-over report</h1>
@@ -264,10 +288,20 @@ export function CalloverResults({
       )}
 
       {/* Order: problems first, then orphans, then successful payments */}
-      <section aria-labelledby="problems-heading" className="mb-6">
-        <h3 id="problems-heading" className="eyebrow mb-2">
-          Payments to look at ({problems.length})
-        </h3>
+      <section aria-labelledby="problems-heading" data-area="problems" className="mb-6">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <h3 id="problems-heading" className="eyebrow">
+            Payments that did Failed/Invalid ({problems.length})
+          </h3>
+          <button
+            type="button"
+            onClick={() => printSingle("problems")}
+            className="print:hidden text-sm text-ink-soft hover:text-stamp transition-colors shrink-0 py-1 -my-1"
+            aria-label="Print only the Payments that did Failed/Invalid table"
+          >
+            Print
+          </button>
+        </div>
         {problems.length === 0 ? (
           <p className="text-sm text-leaf">Every payment is accounted for. Nothing to chase.</p>
         ) : (
@@ -293,20 +327,30 @@ export function CalloverResults({
 
       {/* Unexplained debits: short list by default, full list behind Show all */}
       {unexplainedDebits.length > 0 && (
-        <section className="mb-8" aria-labelledby="orphans-heading">
+        <section className="mb-8" aria-labelledby="orphans-heading" data-area="orphans">
           <div className="flex items-center justify-between gap-3 mb-2">
             <h3 id="orphans-heading" className="eyebrow">
-              No payment to compare with the following ({unexplainedDebits.length}, {naira(totals.unexplainedDebitTotal)})
+              Please Upload this Payments ({unexplainedDebits.length}, {naira(totals.unexplainedDebitTotal)})
             </h3>
-            {unexplainedDebits.length > 5 && (
+            <span className="flex items-center gap-3 shrink-0">
+              {unexplainedDebits.length > 5 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllOrphans((s) => !s)}
+                  className="text-sm text-ink-soft hover:text-stamp transition-colors py-1 -my-1"
+                >
+                  {showAllOrphans ? "Hide" : `Show all ${unexplainedDebits.length}`}
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => setShowAllOrphans((s) => !s)}
-                className="text-sm text-ink-soft hover:text-stamp transition-colors shrink-0 py-1 -my-1"
+                onClick={() => printSingle("orphans")}
+                className="print:hidden text-sm text-ink-soft hover:text-stamp transition-colors py-1 -my-1"
+                aria-label="Print only the Please Upload this Payments table"
               >
-                {showAllOrphans ? "Hide" : `Show all ${unexplainedDebits.length}`}
+                Print
               </button>
-            )}
+            </span>
           </div>
           <div className="overflow-x-auto">
             <table className="ledger ledger--compact">
@@ -318,7 +362,7 @@ export function CalloverResults({
                 </tr>
               </thead>
               <tbody>
-                {(showAllOrphans ? unexplainedDebits : unexplainedDebits.slice(0, 5)).map((l) => (
+                {(printSection === "orphans" || showAllOrphans ? unexplainedDebits : unexplainedDebits.slice(0, 5)).map((l) => (
                   <tr key={l.id}>
                     <td className="tnum whitespace-nowrap">{l.dateISO || "\u00a0"}</td>
                     <td className="text-xs">{l.narration}</td>
@@ -332,14 +376,24 @@ export function CalloverResults({
       )}
 
       {/* Successful payments: always rendered, screen-only users can collapse it */}
-      <section aria-labelledby="paid-heading" className="print:mt-6">
+      <section aria-labelledby="paid-heading" data-area="paid" className="print:mt-6">
         <div className="flex items-center justify-between mb-2 print:hidden">
           <h3 id="paid-heading" className="eyebrow">
             Successful payments ({paid.length})
           </h3>
-          <button type="button" onClick={() => setShowPaid((s) => !s)} className="text-sm text-ink-soft hover:text-stamp transition-colors">
-            {showPaid ? "Hide" : "Show"}
-          </button>
+          <span className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => printSingle("paid")}
+              className="text-sm text-ink-soft hover:text-stamp transition-colors"
+              aria-label="Print only the Successful payments table"
+            >
+              Print
+            </button>
+            <button type="button" onClick={() => setShowPaid((s) => !s)} className="text-sm text-ink-soft hover:text-stamp transition-colors">
+              {showPaid ? "Hide" : "Show"}
+            </button>
+          </span>
         </div>
         <h3 id="paid-heading" className="eyebrow mb-2 hidden print:block">
           Successful payments ({paid.length})

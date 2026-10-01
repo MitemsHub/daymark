@@ -487,6 +487,21 @@ table.ledger {
   thead {
     display: table-header-group;
   }
+
+  /* Single-table printing: the Print button on a results section tags the
+     body and the results root, and only that section's table survives. */
+  body.print-one header,
+  body.print-one footer {
+    display: none !important;
+  }
+  body.print-one [data-results-root] > * {
+    display: none !important;
+  }
+  body.print-one [data-results-root][data-print-section="problems"] > [data-area="problems"],
+  body.print-one [data-results-root][data-print-section="orphans"] > [data-area="orphans"],
+  body.print-one [data-results-root][data-print-section="paid"] > [data-area="paid"] {
+    display: block !important;
+  }
 }
 
 /* ---- Call Over: run animation ------------------------------------------
