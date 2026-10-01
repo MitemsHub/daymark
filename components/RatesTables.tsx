@@ -3,20 +3,8 @@
 import type { BondRate, LoanRate } from "@/data/coopRates";
 import { formatRate } from "@/lib/format";
 
-const GROUP_LABEL: Record<LoanRate["group"], string> = {
-  loan: "Loan rates",
-  project: "Project rate",
-};
-
 export function LoanRatesTable({ rows }: { rows: LoanRate[] }) {
-  const loan = rows.filter((r) => r.group === "loan");
-  const project = rows.filter((r) => r.group === "project");
-  return (
-    <div className="space-y-6">
-      <RatesGroup heading={GROUP_LABEL.loan} rows={loan} />
-      <RatesGroup heading={GROUP_LABEL.project} rows={project} />
-    </div>
-  );
+  return <RatesGroup heading="Loan rates" rows={rows} />;
 }
 
 function RatesGroup({ heading, rows }: { heading: string; rows: LoanRate[] }) {

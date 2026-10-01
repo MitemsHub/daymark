@@ -53,7 +53,8 @@ export function AccountsWidget() {
       <span className="sr-only" role="status">
         {copiedId ? "Account number copied" : ""}
       </span>
-      <table className="ledger ledger--compact w-full">
+      <div className="overflow-x-auto">
+        <table className="ledger ledger--compact w-full">
         <caption className="sr-only">Co-operative bank accounts. Account numbers tap to copy.</caption>
         <thead>
           <tr>
@@ -83,6 +84,7 @@ export function AccountsWidget() {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

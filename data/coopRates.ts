@@ -15,7 +15,7 @@ export interface LoanRate {
   name: string;
   /** New rate in percent, or a verbatim string like "11% FLAT". */
   rate: number | string;
-  /** Grouping as printed: main loan table vs the project table. */
+  /** Kept for stored Data-page overrides; both groups render in the one loan table. */
   group: "loan" | "project";
 }
 
@@ -28,7 +28,7 @@ export const loanRates: LoanRate[] = [
   { id: "loan-seasonal", name: "SEASONAL SALES LOAN", rate: 19, group: "loan" },
   { id: "loan-investment", name: "INVESTMENT LOAN", rate: 19, group: "loan" },
   { id: "loan-lpo", name: "LPO Finance", rate: "11% FLAT", group: "loan" },
-  { id: "loan-project", name: "PROJECT LOAN", rate: 19, group: "project" },
+  { id: "loan-project", name: "PROJECT LOAN", rate: 19, group: "loan" },
 ];
 
 export interface BondRate {

@@ -103,7 +103,8 @@ function VerdictRow({ v, defaultOpen }: { v: PaymentVerdict; defaultOpen?: boole
             {v.hits.length === 0 ? (
               <p className="text-xs text-ink-faint">No statement line carries this reference.</p>
             ) : (
-              <table className="ledger ledger--compact w-full">
+              <div className="overflow-x-auto">
+                <table className="ledger ledger--compact w-full">
                 <caption className="sr-only">Statement lines carrying reference {v.payment.ref}</caption>
                 <thead>
                   <tr>
@@ -124,6 +125,7 @@ function VerdictRow({ v, defaultOpen }: { v: PaymentVerdict; defaultOpen?: boole
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </td>
         </tr>

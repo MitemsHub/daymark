@@ -91,7 +91,8 @@ export function DateCalculator() {
             <h3 id="breakdown-heading" className="eyebrow mb-2">
               Breakdown by month
             </h3>
-            <table className="ledger ledger--compact">
+            <div className="overflow-x-auto">
+              <table className="ledger ledger--compact">
               <caption className="sr-only">Days contributed per calendar month</caption>
               <thead>
                 <tr>
@@ -126,6 +127,7 @@ export function DateCalculator() {
                 </tr>
               </tfoot>
             </table>
+            </div>
           </div>
         </div>
       )}

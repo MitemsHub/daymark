@@ -20,19 +20,23 @@ export default function InvestmentsPage() {
         </p>
       </header>
 
-      <section aria-labelledby="loan-rates-heading">
-        <h2 id="loan-rates-heading" className="eyebrow mb-3">
-          Loan rates
-        </h2>
-        <LoanRatesTable rows={loanRates} />
-      </section>
+      {/* Two columns on large screens so the short rate tables share the
+          width instead of stacking; they fold back to one column on phones. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-12 items-start">
+        <section aria-labelledby="loan-rates-heading">
+          <h2 id="loan-rates-heading" className="eyebrow mb-3">
+            Loan rates
+          </h2>
+          <LoanRatesTable rows={loanRates} />
+        </section>
 
-      <section aria-labelledby="bond-rates-heading">
-        <h2 id="bond-rates-heading" className="eyebrow mb-3">
-          Investment bond rates
-        </h2>
-        <BondRatesTable rows={bondRates} />
-      </section>
+        <section aria-labelledby="bond-rates-heading">
+          <h2 id="bond-rates-heading" className="eyebrow mb-3">
+            Investment bond rates
+          </h2>
+          <BondRatesTable rows={bondRates} />
+        </section>
+      </div>
 
       <section aria-labelledby="series-heading">
         <h2 id="series-heading" className="eyebrow mb-3">
