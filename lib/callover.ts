@@ -120,8 +120,10 @@ export interface BankSummary {
  */
 export function detectBank(lines: StatementLine[]): string {
   const joined = lines.slice(0, 400).map((l) => l.narration).join(" \n ");
-  if (/Zenith|ZBA\d{7}|ZB\/A\//i.test(joined)) return "Zenith Bank";
+  // GTB before Zenith: GT's own brand words are unambiguous, while a
+  // bare ZB/A/ shape can turn up inside GAPS references on a GT statement.
   if (/GTWORLD|GUARANTY/i.test(joined)) return "Guaranty Trust Bank";
+  if (/Zenith|ZBA\d{7}|ZB\/A\//i.test(joined)) return "Zenith Bank";
   if (/FIDELITY/i.test(joined)) return "Fidelity Bank";
   if (/ACCESS/i.test(joined)) return "Access Bank";
   if (/UBA\b|\bUBN\b/i.test(joined)) return "UBA";
@@ -180,9 +182,14 @@ export function parseAmount(raw: unknown): number {
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
 }
 
+/** Numeric date component order, when a file proves which one it uses. */
+export type DateOrder = "dmy" | "mdy";
+
 /** Parse dates: ISO (2026-09-28), day-first (28/09/2026), dashed (28-Sep-26),
- *  and GTB-style datetimes ("8/1/26 17:51", the time part is dropped). */
-export function parseDateAny(raw: unknown): string {
+ *  and GTB-style datetimes ("8/1/26 17:51", the time part is dropped).
+ *  `order` only breaks ties: when both components are 12 or less the file
+ *  order wins, otherwise the unambiguous component decides. */
+export function parseDateAny(raw: unknown, order?: DateOrder): string {
   const s = String(raw ?? "").trim();
   if (!s) return "";
   const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
@@ -190,12 +197,20 @@ export function parseDateAny(raw: unknown): string {
   const firstToken = s.split(/\s+/)[0] ?? s;
   const dmy = /^(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})$/.exec(s) ?? /^(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})$/.exec(firstToken);
   if (dmy) {
-    const d = Number(dmy[1]);
-    const m = Number(dmy[2]);
-    let y = Number(dmy[3]);
-    if (y < 100) y += 2000;
+    let a = Number(dmy[1]);
+    let b = Number(dmy[2]);
+    const y = Number(dmy[3]);
+    // Work out which component is the day. A component above 12 can only
+    // be a day; when both are 12 or less the proven file order decides,
+    // and the default stays day-first, the shape Nigerian statements use.
+    let swapped = false;
+    if (b > 12) swapped = true;
+    else if (a <= 12 && b <= 12 && order === "mdy") swapped = true;
+    if (swapped) [a, b] = [b, a];
+    const d = a;
+    const m = b;
     if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
-      return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      return `${y < 100 ? y + 2000 : y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     }
   }
   const mon = /^(\d{1,2})[- ]([A-Za-z]{3,})[- ](\d{2,4})$/.exec(s);
@@ -223,11 +238,11 @@ export function isReversalNarration(narration: string): boolean {
 
 export function toStatementLine(id: number, raw: {
   date?: unknown; narration?: unknown; debit?: unknown; credit?: unknown; refField?: unknown; source?: unknown;
-}): StatementLine {
+}, dateOrder?: DateOrder): StatementLine {
   const narration = String(raw.narration ?? "").trim();
   return {
     id,
-    dateISO: parseDateAny(raw.date),
+    dateISO: parseDateAny(raw.date, dateOrder),
     narration,
     normNarration: narration.toUpperCase().replace(SEPARATORS, ""),
     debit: parseAmount(raw.debit),
@@ -241,7 +256,7 @@ export function toStatementLine(id: number, raw: {
 
 export function toPaymentRow(id: number, raw: {
   ref?: unknown; beneficiary?: unknown; amount?: unknown; dueDate?: unknown;
-}): PaymentRow {
+}, dateOrder?: DateOrder): PaymentRow {
   const ref = String(raw.ref ?? "").trim();
   const candidates = refCandidates(ref);
   return {
@@ -251,7 +266,7 @@ export function toPaymentRow(id: number, raw: {
     candidates,
     beneficiary: String(raw.beneficiary ?? "").trim(),
     amount: parseAmount(raw.amount),
-    dueDateISO: parseDateAny(raw.dueDate),
+    dueDateISO: parseDateAny(raw.dueDate, dateOrder),
   };
 }
 

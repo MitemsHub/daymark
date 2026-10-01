@@ -10,6 +10,7 @@ import {
   isReversalNarration,
   type StatementLine,
   type PaymentRow,
+  type DateOrder,
 } from "./callover";
 
 export interface TableSheet {
@@ -47,6 +48,40 @@ function normalizeHeader(h: string): string {
   return h.toUpperCase().replace(/[^A-Z0-9]/g, " ").replace(/\s+/g, " ").trim();
 }
 
+/** Words a real header row is made of, across the banks we have seen. */
+const HEADER_HINTS = [
+  "EFFECTIVE DATE", "VALUE DATE", "TRANS DATE", "TRANSACTION DATE", "POSTED DATE", "POST DATE",
+  "DESCRIPTION", "NARRATION", "REMARKS", "PARTICULARS", "PAYEE", "MEMO",
+  "DEBIT", "CREDIT", "WITHDRAWAL", "DEPOSIT",
+  "TRANSACTION REFERENCE", "REFERENCE", "AMOUNT", "BENEFICIARY",
+];
+
+/** A row of column names: several known header words, no data values. */
+function looksLikeHeaderRow(cells: string[]): boolean {
+  const H = cells.map(normalizeHeader).filter(Boolean);
+  if (H.length < 3) return false;
+  const hits = H.filter((h) => HEADER_HINTS.some((k) => h === k || h.includes(k))).length;
+  return hits >= 3;
+}
+
+/**
+ * Find the header row of a sheet. Bank exports often carry a title page
+ * first: bank name, account name, period, opening balance, blank rows.
+ * Guaranty Trust statements, for example, put the real header on row 18.
+ * Scan a generous prefix for a row that reads like column names, then fall
+ * back to the old loose text match on the first rows, then to row zero.
+ */
+function findHeaderRow(rows: unknown[][]): number {
+  for (let i = 0; i < Math.min(rows.length, 100); i++) {
+    if (looksLikeHeaderRow(rows[i].map((c) => String(c)))) return i;
+  }
+  for (let i = 0; i < Math.min(rows.length, 5); i++) {
+    const joined = rows[i].map((c) => String(c)).join(" ").toUpperCase();
+    if (/EFFECTIVE DATE|TRANSACTION REFERENCE|DEBIT|CREDIT|DESCRIPTION|NARRATION/.test(joined)) return i;
+  }
+  return 0;
+}
+
 /** Read every sheet of a workbook buffer as header + rows. */
 export async function readWorkbook(buf: ArrayBuffer): Promise<ParsedWorkbook> {
   const XLSX = await import("xlsx");
@@ -59,16 +94,7 @@ export async function readWorkbook(buf: ArrayBuffer): Promise<ParsedWorkbook> {
       defval: "",
     });
     if (rows.length === 0) continue;
-    const headerRow = rows[0] ?? [];
-    // Skip leading non-header rows (some exports have titles on top).
-    let start = 0;
-    for (let i = 0; i < Math.min(rows.length, 5); i++) {
-      const joined = rows[i].map((c) => String(c)).join(" ").toUpperCase();
-      if (/EFFECTIVE DATE|TRANSACTION REFERENCE|DEBIT|CREDIT|DESCRIPTION|NARRATION/.test(joined)) {
-        start = i;
-        break;
-      }
-    }
+    const start = findHeaderRow(rows);
     const headers = (rows[start] ?? []).map((c) => String(c).trim());
     sheets.push({ name, headers, rows: rows.slice(start + 1) });
   }
@@ -77,14 +103,18 @@ export async function readWorkbook(buf: ArrayBuffer): Promise<ParsedWorkbook> {
   const paymentSheets: string[] = [];
   for (const s of sheets) {
     const H = s.headers.map(normalizeHeader);
-    const hasStatementCols =
-      H.some((h) => h.includes("EFFECTIVE DATE") || h.includes("VALUE DATE")) &&
-      H.some((h) => h.includes("DEBIT")) &&
-      H.some((h) => h.includes("CREDIT"));
+    // A statement shows dated movements on two sides. Any date column plus
+    // any debit/credit-shaped column counts, so GT's "Trans Date" and a
+    // bare "Date" both qualify. A payments list has an amount but no
+    // two-sided movement columns, so it never reads as a statement.
+    const hasDate = H.some((h) => h.includes("DATE"));
+    const hasMoneySides = H.some(
+      (h) => h.includes("DEBIT") || h.includes("CREDIT") || h.includes("WITHDRAWAL") || h.includes("DEPOSIT"),
+    );
+    const hasStatementCols = hasDate && hasMoneySides;
     const hasPaymentCols =
       H.some((h) => h.includes("TRANSACTION REFERENCE")) &&
       H.some((h) => h.includes("AMOUNT"));
-    // A sheet can be both in odd workbooks; prefer payment when refs exist.
     if (hasPaymentCols) paymentSheets.push(s.name);
     else if (hasStatementCols) statementSheets.push(s.name);
   }
@@ -93,8 +123,26 @@ export async function readWorkbook(buf: ArrayBuffer): Promise<ParsedWorkbook> {
 
 export function findStatementColumns(sheet: TableSheet): StatementColumns | null {
   const H = sheet.headers.map(normalizeHeader);
-  const date = H.findIndex((h) => h.includes("EFFECTIVE DATE") || h.includes("VALUE DATE") || h.includes("TRANS DATE") || h === "DATE" || h.includes("POST DATE"));
-  const narration = H.findIndex((h) => h.includes("DESCRIPTION") || h.includes("NARRATION") || h.includes("PAYEE") || h.includes("MEMO") || h.includes("REMARKS"));
+  const date = H.findIndex(
+    (h) =>
+      h.includes("EFFECTIVE DATE") ||
+      h.includes("TRANS DATE") ||
+      h.includes("TRANSACTION DATE") ||
+      h.includes("POSTED DATE") ||
+      h.includes("POST DATE") ||
+      h.includes("VALUE DATE") ||
+      h === "DATE",
+  );
+  const narration = H.findIndex(
+    (h) =>
+      h.includes("DESCRIPTION") ||
+      h.includes("NARRATION") ||
+      h.includes("REMARKS") ||
+      h.includes("PARTICULARS") ||
+      h.includes("PAYEE") ||
+      h.includes("MEMO") ||
+      h.includes("DETAILS"),
+  );
   const debit = H.findIndex((h) => h.includes("DEBIT") || h.includes("WITHDRAWAL"));
   const credit = H.findIndex((h) => h.includes("CREDIT") || h.includes("DEPOSIT"));
   const refField = H.findIndex((h) => h === "REFERENCE" || h.includes("REF NO") || h.includes("CHEQUE NO") || h.includes("CHECK NO"));
@@ -104,7 +152,15 @@ export function findStatementColumns(sheet: TableSheet): StatementColumns | null
 
 export function findPaymentColumns(sheet: TableSheet): PaymentColumns | null {
   const H = sheet.headers.map(normalizeHeader);
-  const ref = H.findIndex((h) => h.includes("TRANSACTION REFERENCE") || h.includes("REFERENCE") || h.includes("CHEQUE NO") || h.includes("CHECKER"));
+  const ref = H.findIndex(
+    (h) =>
+      h.includes("TRANSACTION REFERENCE") ||
+      h.includes("REFERENCE") ||
+      h.includes("REF NO") ||
+      h.includes("REF NUMBER") ||
+      h.includes("CHEQUE NO") ||
+      h.includes("CHECKER"),
+  );
   const beneficiary = H.findIndex((h) => h.includes("BENEFICIARY NAME") || h.includes("BENEFICIARY") || h.includes("PAYEE") || h.includes("NAME"));
   const amount = H.findIndex((h) => h === "AMOUNT" || h.includes("AMOUNT") || h.includes("VALUE"));
   const dueDate = H.findIndex((h) => h.includes("DUE DATE") || h.includes("PAYMENT DATE") || h.includes("VALUE DATE") || h === "DATE");
@@ -112,9 +168,29 @@ export function findPaymentColumns(sheet: TableSheet): PaymentColumns | null {
   return { ref, beneficiary, amount, dueDate };
 }
 
+/**
+ * Detect a file's numeric date order from its own values: a component
+ * above 12 can only be a day, so its slot proves the order. GT exports
+ * prove month-first with dates like 6/13/26; Nigerian statements prove
+ * day-first with 28/09/2026. Returns undefined when nothing proves an
+ * order, and the day-first default holds.
+ */
+function detectDateOrder(values: unknown[]): DateOrder | undefined {
+  for (const v of values) {
+    const m = /^(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})/.exec(String(v ?? "").trim());
+    if (!m) continue;
+    const a = Number(m[1]);
+    const b = Number(m[2]);
+    if (a > 12) return "dmy";
+    if (b > 12) return "mdy";
+  }
+  return undefined;
+}
+
 /** Pull statement lines from one sheet, tagged with the file they came from. */
 export function statementLinesFromSheet(sheet: TableSheet, cols: StatementColumns, source = ""): StatementLine[] {
   const out: StatementLine[] = [];
+  const order = detectDateOrder(cols.date >= 0 ? sheet.rows.map((r) => r[cols.date]) : []);
   for (const r of sheet.rows) {
     const narration = String(r[cols.narration] ?? "").trim();
     const refRaw = cols.refField >= 0 ? String(r[cols.refField] ?? "").trim() : "";
@@ -131,7 +207,7 @@ export function statementLinesFromSheet(sheet: TableSheet, cols: StatementColumn
       credit,
       refField: refRaw.replace(/^'+/, ""), // GTB exports prefix with an apostrophe
       source,
-    }));
+    }, order));
   }
   return out;
 }
@@ -139,6 +215,7 @@ export function statementLinesFromSheet(sheet: TableSheet, cols: StatementColumn
 /** Pull payment rows from one sheet. */
 export function paymentsFromSheet(sheet: TableSheet, cols: PaymentColumns): PaymentRow[] {
   const out: PaymentRow[] = [];
+  const order = detectDateOrder(cols.dueDate >= 0 ? sheet.rows.map((r) => r[cols.dueDate]) : []);
   for (const r of sheet.rows) {
     const ref = String(r[cols.ref] ?? "").trim();
     if (!ref) continue;
@@ -148,7 +225,7 @@ export function paymentsFromSheet(sheet: TableSheet, cols: PaymentColumns): Paym
         beneficiary: cols.beneficiary >= 0 ? r[cols.beneficiary] : "",
         amount: cols.amount >= 0 ? r[cols.amount] : 0,
         dueDate: cols.dueDate >= 0 ? r[cols.dueDate] : "",
-      }),
+      }, order),
     );
   }
   return out;
