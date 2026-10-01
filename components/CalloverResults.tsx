@@ -35,6 +35,39 @@ function Tile({ label, value, tone = "" }: { label: string; value: number | stri
   );
 }
 
+/**
+ * The clears-in badge. Ticking is isolated here so the one-second countdown
+ * never re-renders the results tree around it. Taps on the table buttons
+ * keep landing on the same stable DOM nodes.
+ */
+function CountdownBadge({ expiresAt }: { expiresAt: number }) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const clamped = Math.max(0, expiresAt - now);
+  const mm = Math.floor(clamped / 60_000);
+  const ss = String(Math.floor((clamped % 60_000) / 1000)).padStart(2, "0");
+  const urgent = clamped <= 5 * 60_000;
+
+  return (
+    <span
+      role="timer"
+      aria-label={`Session clears in ${mm}:${ss}`}
+      className={`tnum text-xs px-2 py-1 rounded-sm border ${
+        urgent
+          ? "border-stamp bg-stamp-wash text-stamp font-semibold"
+          : "hairline text-ink-faint"
+      }`}
+    >
+      clears in {mm}:{ss}
+    </span>
+  );
+}
+
 function VerdictRow({ v, defaultOpen }: { v: PaymentVerdict; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen ?? false);
   const problem = v.status !== "Paid";
@@ -119,24 +152,6 @@ export function CalloverResults({
   const [showPaid, setShowPaid] = useState(false);
   const [showAllOrphans, setShowAllOrphans] = useState(false);
   const [query, setQuery] = useState("");
-  const [now, setNow] = useState(() => Date.now());
-
-  // Tick the countdown badge once a second while results are on screen.
-  useEffect(() => {
-    if (expiresAt === null) return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, [expiresAt]);
-
-  const msLeft = expiresAt !== null ? expiresAt - now : null;
-  const badge = (() => {
-    if (msLeft === null) return null;
-    const clamped = Math.max(0, msLeft);
-    const mm = Math.floor(clamped / 60_000);
-    const ss = Math.floor((clamped % 60_000) / 1000);
-    const urgent = clamped <= 5 * 60_000;
-    return { text: `${mm}:${String(ss).padStart(2, "0")}`, urgent };
-  })();
 
   const { verdicts, unexplainedDebits, totals } = result;
 
@@ -169,19 +184,7 @@ export function CalloverResults({
 
       <div className="flex flex-wrap items-end justify-between gap-3 mb-4 print:hidden">
         <h2 className="eyebrow">Results</h2>
-        {badge && (
-          <span
-            role="timer"
-            aria-label={`Session clears in ${badge.text}`}
-            className={`tnum text-xs px-2 py-1 rounded-sm border ${
-              badge.urgent
-                ? "border-stamp bg-stamp-wash text-stamp font-semibold"
-                : "hairline text-ink-faint"
-            }`}
-          >
-            clears in {badge.text}
-          </span>
-        )}
+        {expiresAt !== null && <CountdownBadge expiresAt={expiresAt} />}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <input
             type="search"
@@ -271,7 +274,7 @@ export function CalloverResults({
               <button
                 type="button"
                 onClick={() => setShowAllOrphans((s) => !s)}
-                className="text-sm text-ink-soft hover:text-stamp transition-colors shrink-0"
+                className="text-sm text-ink-soft hover:text-stamp transition-colors shrink-0 py-1 -my-1"
               >
                 {showAllOrphans ? "Hide" : `Show all ${unexplainedDebits.length}`}
               </button>

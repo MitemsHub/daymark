@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { runCallOver, type CallOverResult } from "@/lib/callover";
 import { buildReportHtml, printReportHtml } from "@/lib/report";
 import { CalloverUploader, type CallOverData } from "@/components/CalloverUploader";
@@ -8,6 +8,32 @@ import { CalloverResults } from "@/components/CalloverResults";
 
 const SESSION_KEY = "daymark.callover.v2";
 const SESSION_TTL_MS = 60 * 60 * 1000; // one hour after results show
+
+/**
+ * The self-clearing sentence. Ticking lives here, in its own component, so
+ * the one-second countdown never re-renders the results above it. Taps on
+ * buttons keep landing on the same stable DOM nodes.
+ */
+function SessionCountdown({ expiresAt, onExpired }: { expiresAt: number; onExpired: () => void }) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const left = Math.max(0, expiresAt - now);
+  useEffect(() => {
+    if (left <= 0) onExpired();
+  }, [left, onExpired]);
+
+  const minutesLeft = Math.ceil(left / 60_000);
+  return (
+    <p className="text-xs text-ink-faint mt-4 print:hidden" role="timer" aria-live="off">
+      This session, including the files you uploaded, clears itself in {minutesLeft} minute{minutesLeft === 1 ? "" : "s"}.
+    </p>
+  );
+}
 
 interface StoredSession {
   savedAt: number;
@@ -22,9 +48,7 @@ export function Callover() {
   const [result, setResult] = useState<CallOverResult | null>(null);
   const [running, setRunning] = useState(false);
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
-  const [now, setNow] = useState(() => Date.now());
   const [hydrated, setHydrated] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clearSession = useCallback(() => {
     try {
@@ -65,35 +89,12 @@ export function Callover() {
     setHydrated(true);
   }, [clearSession]);
 
-  // The countdown ticker, running only while a session is live.
-  useEffect(() => {
-    if (expiresAt === null) {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      return;
-    }
-    timerRef.current = setInterval(() => setNow(Date.now()), 1000);
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-  }, [expiresAt]);
-
   const wipe = useCallback(() => {
     setData(null);
     setResult(null);
     setExpiresAt(null);
     clearSession();
   }, [clearSession]);
-
-  // When the hour is up, everything goes.
-  useEffect(() => {
-    if (expiresAt !== null && now >= expiresAt) wipe();
-  }, [now, expiresAt, wipe]);
 
   const persist = useCallback(
     (d: CallOverData | null) => {
@@ -165,8 +166,6 @@ export function Callover() {
     );
   }, [result, data]);
 
-  const minutesLeft = expiresAt !== null ? Math.max(0, Math.ceil((expiresAt - now) / 60_000)) : null;
-
   return (
     <section aria-labelledby="callover-heading" className="reveal">
       <h1 id="callover-heading" className="sr-only">
@@ -208,11 +207,7 @@ export function Callover() {
         />
       )}
 
-      {minutesLeft !== null && (
-        <p className="text-xs text-ink-faint mt-4 print:hidden" role="timer" aria-live="off">
-          This session, including the files you uploaded, clears itself in {minutesLeft} minute{minutesLeft === 1 ? "" : "s"}.
-        </p>
-      )}
+      {expiresAt !== null && <SessionCountdown expiresAt={expiresAt} onExpired={wipe} />}
 
       {hydrated && !data && !result && (
         <p className="text-xs text-ink-faint mt-8 print:hidden">

@@ -28,6 +28,17 @@ jobs:
         run: npm ci
       - name: Test
         run: npm test
+      - name: Smoke test a built site (upload fixtures, run call-over)
+        # Builds the real site (same command the Pages build runs) and drives
+        # it with a browser: fixture CSVs go in, tiles and the Show-all/Hide
+        # toggle must come out right. Catches upload/results regressions
+        # before anything publishes.
+        run: |
+          npm run build
+          touch e2e/.smoke-env
+          npx playwright install --with-deps chromium
+          PW_SERVER_COMMAND="npx next start -p 3000" npx playwright test
+          rm e2e/.smoke-env
       - name: Build static site
         run: npm run build:pages
       - name: Publish gh-pages branch (branch-mode safety net)

@@ -26,3 +26,10 @@ yarn-error.log*
 
 # backups exported from the Data page
 daymark-data*.json
+
+# local marker: e2e smoke runs against the production build
+/e2e/.smoke-env
+
+# playwright artifacts
+test-results/
+playwright-report/
