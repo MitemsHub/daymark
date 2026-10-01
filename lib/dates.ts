@@ -56,6 +56,33 @@ export function todayISO(): string {
   return `${n.getFullYear()}-${mm}-${dd}`;
 }
 
+/** Format an ISO "YYYY-MM-DD" string as dd/mm/yyyy; "" stays "". */
+export function formatDmy(iso: string): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return "";
+  return `${d}/${m}/${y}`;
+}
+
+/**
+ * Parse dd/mm/yyyy (also accepts d/m/yy and separators . - space) into ISO,
+ * or null when the text is not a real calendar date. Day-first, the way
+ * Nigerian dates are written.
+ */
+export function parseDmy(raw: string): string | null {
+  const s = raw.trim();
+  const m = /^(\d{1,2})[./\- ](\d{1,2})[./\- ](\d{2,4})$/.exec(s);
+  if (!m) return null;
+  const d = Number(m[1]);
+  const mo = Number(m[2]);
+  let y = Number(m[3]);
+  if (y < 100) y += 2000;
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  const probe = new Date(y, mo - 1, d, 12, 0, 0, 0);
+  if (probe.getMonth() !== mo - 1 || probe.getDate() !== d) return null;
+  return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
 /**
  * Validate a date range for the calculator. Returns a friendly error message
  * (for direct display) or null when the range is usable.

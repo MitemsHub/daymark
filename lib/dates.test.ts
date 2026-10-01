@@ -9,6 +9,8 @@ import {
   reverseCalculate,
   todayISO,
   validateRange,
+  formatDmy,
+  parseDmy,
 } from "./dates";
 
 describe("inclusive / exclusive day counts", () => {
@@ -171,5 +173,25 @@ describe("parse & format", () => {
     const iso = todayISO();
     expect(iso).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(Number(iso.slice(0, 4))).toBe(new Date().getFullYear());
+  });
+});
+
+describe("dd/mm/yyyy helpers", () => {
+  it("formats ISO as day-first", () => {
+    expect(formatDmy("2026-10-01")).toBe("01/10/2026");
+    expect(formatDmy("")).toBe("");
+  });
+
+  it("parses day-first text into ISO", () => {
+    expect(parseDmy("01/10/2026")).toBe("2026-10-01");
+    expect(parseDmy("1/10/26")).toBe("2026-10-01");
+    expect(parseDmy("16-04-2026")).toBe("2026-04-16");
+  });
+
+  it("rejects impossible dates and foreign shapes", () => {
+    expect(parseDmy("13/13/2026")).toBeNull(); // month 13
+    expect(parseDmy("31/02/2026")).toBeNull(); // no Feb 31
+    expect(parseDmy("2026-10-01")).toBeNull(); // not day-first
+    expect(parseDmy("hello")).toBeNull();
   });
 });

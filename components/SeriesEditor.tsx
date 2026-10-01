@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { InvestmentOption, InvestmentSeries } from "@/data/investmentSeries";
 import { FieldLabel } from "@/components/ui";
+import { DmyInput } from "@/components/DmyInput";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -96,22 +97,18 @@ export function SeriesEditor({ rows, onSave }: { rows: InvestmentSeries[]; onSav
               </div>
               <div>
                 <FieldLabel htmlFor={`s-start-${s.id}`}>Start date</FieldLabel>
-                <input
+                <DmyInput
                   id={`s-start-${s.id}`}
-                  type="date"
                   value={s.startDate}
-                  onChange={(e) => update(s.id, { startDate: e.target.value })}
-                  className="tnum w-full border hairline bg-white rounded-sm px-2.5 py-1.5 text-sm"
+                  onChange={(iso) => update(s.id, { startDate: iso || s.startDate })}
                 />
               </div>
               <div>
                 <FieldLabel htmlFor={`s-end-${s.id}`}>End date (blank = not specified)</FieldLabel>
-                <input
+                <DmyInput
                   id={`s-end-${s.id}`}
-                  type="date"
                   value={s.endDate ?? ""}
-                  onChange={(e) => update(s.id, { endDate: e.target.value || null })}
-                  className="tnum w-full border hairline bg-white rounded-sm px-2.5 py-1.5 text-sm"
+                  onChange={(iso) => update(s.id, { endDate: iso || null })}
                 />
               </div>
               <div>
