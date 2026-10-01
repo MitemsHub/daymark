@@ -218,6 +218,61 @@ describe("runCallOver totals and orphans", () => {
   });
 });
 
+describe("GAPS vendor payments that never repeat their reference", () => {
+  // The CBN co-op's GAPS exports carry refs like GTB/A/008846/1 that appear
+  // nowhere on the statement; the narration holds COOP/TR/14/1741/1 and the
+  // beneficiary name instead. The engine must say Not found and suggest the
+  // same-amount, same-name debit nearby.
+  const Lg = (id: number, date: string, narration: string, debit: number): StatementLine =>
+    toStatementLine(id, { date, narration, debit });
+
+  it("stays Not found but surfaces a probable match by amount, date and name", () => {
+    const payment = P(1, "GTB/A/008848/1", "Giwa Sidikat Abike", 40000, "2026-08-20");
+    const lines = [
+      Lg(1, "2026-08-20", "TRANSFER BETWEEN CUSTOMERS VIA GAPS COOP/TR/14/1741/1 236609560 TRANSPORT FROM C.B.N STAFF MULTI-PURPOSE CO OP TO GIWA SIDIKAT ABIKE GAPS0023723318", 40000),
+      Lg(2, "2026-08-20", "TRANSFER BETWEEN CUSTOMERS VIA GAPS TR/14/1697/1 236472540 LUNCH AND TRANSPORT FROM C.B.N STAFF MULTI-PURPOSE CO OP TO MANDU IBRAH", 40000),
+      Lg(3, "2026-08-19", "COMMISSION Commission on NIP TransferCHARGES", 25),
+    ];
+    const result = runCallOver([payment], lines);
+    expect(result.totals.notFound).toBe(1);
+    const v = result.verdicts[0];
+    expect(v.status).toBe("Not found");
+    expect(v.probable).toBeDefined();
+    expect(v.probable!.lineId).toBe(1); // the Giwa line, not the other 40k
+    expect(v.probable!.reason).toContain("GIWA");
+  });
+
+  it("prefers a probable whose amount agrees exactly over a near amount", () => {
+    const payment = P(1, "GTB/A/008846/1", "UKEHE THADDEUSSAMUEL", 640000, "2026-08-20");
+    const lines = [
+      Lg(1, "2026-08-21", "TRANSFER BETWEEN CUSTOMERS VIA GAPS COOP/TR/14/1750/2 236700100 WITHDRAWAL TO UKEHE THADDEUS SAMUEL", 635500),
+      Lg(2, "2026-08-20", "TRANSFER BETWEEN CUSTOMERS VIA GAPS COOP/TR/14/1749/1 236699010 MONTHLY STAT SITTING ALLOWANCE TO UKEHE THADDEUSSAMUEL", 640000),
+    ];
+    const result = runCallOver([payment], lines);
+    expect(result.verdicts[0].probable?.lineId).toBe(2);
+  });
+
+  it("matches on the payment remark when the name never made it to the statement", () => {
+    const payment = toPaymentRow(1, { ref: "GTB/A/008847/1", beneficiary: "E00063", amount: 323300, dueDate: "2026-08-17", remark: "PYMT STAFF MEAL SUBSIDY FROM AUG 10-14, 2026 PIUS" });
+    const lines = [
+      Lg(1, "2026-08-17", "TRANSFER BETWEEN CUSTOMERS VIA GAPS COOP/TR/14/1698/13 236472429 MEAL SUBSIDY FOR STAFF FROM C.B.N STAFF MULTI-PURPOSE COOP TO OBIANYOR PIUS OKEZIE", 323300),
+    ];
+    const result = runCallOver([payment], lines);
+    expect(result.verdicts[0].status).toBe("Not found");
+    expect(result.verdicts[0].probable?.lineId).toBe(1);
+    expect(result.verdicts[0].probable!.reason).toContain("SUBSIDY");
+  });
+
+  it("never claims Paid without the reference on the statement", () => {
+    const payment = P(1, "GTB/A/008848/1", "Giwa Sidikat Abike", 40000, "2026-08-20");
+    const lines = [
+      Lg(1, "2026-08-20", "TRANSFER BETWEEN CUSTOMERS VIA GAPS COOP/TR/14/1741/1 TRANSPORT TO GIWA SIDIKAT ABIKE", 40000),
+    ];
+    const result = runCallOver([payment], lines);
+    expect(result.verdicts[0].status).toBe("Not found");
+  });
+});
+
 describe("validation against the real workbook", () => {
   it("matches the Excel formula verdicts on the live file", async () => {
     const fs = await import("node:fs");

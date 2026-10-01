@@ -124,6 +124,40 @@ describe("statementLinesFromSheet on the GT sheet", () => {
   });
 });
 
+// GAPS vendor payment export: camel-cased headers, a bare Reference
+// column, VendorName beside VendorCode. This is the shape the CBN co-op
+// uploads four of alongside a GT statement.
+const GAPS_PAYMENT_ROWS: unknown[][] = [
+  ["PaymentAmount", "PaymentDate", "Reference", "Remark", "VendorCode", "VendorName", "VendorAccount", "BankSortCode"],
+  ["120000", "2026-08-20", "GTB/A/008849/1", "PYMT FOR LUNCH ALLOW. TO MCs ", "A20919", "UKEHE THADDEUSSAMUEL", "0136114366", "58152052"],
+];
+
+describe("the GAPS vendor payment export", () => {
+  it("reads as a payment list, never as a statement", async () => {
+    const wb = await readWorkbook(workbookFromRows(GAPS_PAYMENT_ROWS));
+    expect(wb.paymentSheets).toEqual(["Sheet1"]);
+    expect(wb.statementSheets).toEqual([]);
+  });
+
+  it("maps VendorName (not VendorCode) and the ISO payment date", async () => {
+    const wb = await readWorkbook(workbookFromRows(GAPS_PAYMENT_ROWS));
+    const cols = findPaymentColumns(wb.sheets[0]);
+    expect(cols).not.toBeNull();
+    expect(cols!.ref).toBe(2);
+    expect(cols!.beneficiary).toBe(5); // VendorName, not VendorCode at 4
+    expect(cols!.amount).toBe(0);
+    expect(cols!.dueDate).toBe(1);
+    expect(cols!.remark).toBe(3);
+    const payments = paymentsFromSheet(wb.sheets[0], cols!);
+    expect(payments).toHaveLength(1);
+    expect(payments[0].ref).toBe("GTB/A/008849/1");
+    expect(payments[0].beneficiary).toBe("UKEHE THADDEUSSAMUEL");
+    expect(payments[0].amount).toBe(120000);
+    expect(payments[0].dueDateISO).toBe("2026-08-20");
+    expect(payments[0].remark).toContain("LUNCH ALLOW");
+  });
+});
+
 describe("findPaymentColumns", () => {
   it("resolves the standard payment headers", async () => {
     const rows: unknown[][] = [

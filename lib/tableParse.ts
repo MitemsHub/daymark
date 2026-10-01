@@ -37,13 +37,6 @@ export interface StatementColumns {
   refField: number;
 }
 
-export interface PaymentColumns {
-  ref: number;
-  beneficiary: number;
-  amount: number;
-  dueDate: number;
-}
-
 function normalizeHeader(h: string): string {
   return h.toUpperCase().replace(/[^A-Z0-9]/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -112,9 +105,13 @@ export async function readWorkbook(buf: ArrayBuffer): Promise<ParsedWorkbook> {
       (h) => h.includes("DEBIT") || h.includes("CREDIT") || h.includes("WITHDRAWAL") || h.includes("DEPOSIT"),
     );
     const hasStatementCols = hasDate && hasMoneySides;
-    const hasPaymentCols =
-      H.some((h) => h.includes("TRANSACTION REFERENCE")) &&
-      H.some((h) => h.includes("AMOUNT"));
+    // Two payment shapes so far: the Zenith-style list (TRANSACTION
+    // REFERENCE + AMOUNT) and the GAPS vendor export (Reference +
+    // PaymentAmount, camel-cased). A bare "AMOUNT" column plus a reference
+    // column also counts, as long as the sheet never read as a statement.
+    const hasRef = H.some((h) => h.includes("TRANSACTION REFERENCE") || h === "REFERENCE" || h.includes("REF NO"));
+    const hasAmount = H.some((h) => h.includes("AMOUNT"));
+    const hasPaymentCols = hasRef && hasAmount;
     if (hasPaymentCols) paymentSheets.push(s.name);
     else if (hasStatementCols) statementSheets.push(s.name);
   }
@@ -150,22 +147,37 @@ export function findStatementColumns(sheet: TableSheet): StatementColumns | null
   return { date: date >= 0 ? date : -1, narration, debit, credit, refField };
 }
 
+export interface PaymentColumns {
+  ref: number;
+  beneficiary: number;
+  amount: number;
+  dueDate: number;
+  /** the payment file's own purpose text (GAPS "Remark"); -1 when absent */
+  remark: number;
+}
+
 export function findPaymentColumns(sheet: TableSheet): PaymentColumns | null {
   const H = sheet.headers.map(normalizeHeader);
   const ref = H.findIndex(
     (h) =>
       h.includes("TRANSACTION REFERENCE") ||
-      h.includes("REFERENCE") ||
+      h === "REFERENCE" ||
       h.includes("REF NO") ||
       h.includes("REF NUMBER") ||
       h.includes("CHEQUE NO") ||
       h.includes("CHECKER"),
   );
-  const beneficiary = H.findIndex((h) => h.includes("BENEFICIARY NAME") || h.includes("BENEFICIARY") || h.includes("PAYEE") || h.includes("NAME"));
+  // Name column, in two passes: a real name column first ("BENEFICIARY
+  // NAME", or the GAPS vendor export's camel-cased "VendorName" which
+  // normalizes to VENDORNAME), then any looser variant. Without the pass
+  // order, GAPS picks "VendorCode" (it contains VENDOR) as the name.
+  const exactName = H.findIndex((h) => h === "BENEFICIARY NAME" || h === "VENDOR NAME" || h.endsWith("NAME"));
+  const beneficiary = exactName >= 0 ? exactName : H.findIndex((h) => h.includes("BENEFICIARY") || h.includes("VENDOR") || h.includes("PAYEE") || h.includes("NAME"));
   const amount = H.findIndex((h) => h === "AMOUNT" || h.includes("AMOUNT") || h.includes("VALUE"));
-  const dueDate = H.findIndex((h) => h.includes("DUE DATE") || h.includes("PAYMENT DATE") || h.includes("VALUE DATE") || h === "DATE");
+  const dueDate = H.findIndex((h) => h.includes("DUE DATE") || h.includes("PAYMENT DATE") || h.includes("PAYMENTDATE") || h.includes("VALUE DATE") || h === "DATE");
+  const remark = H.findIndex((h) => h.includes("REMARK") || h.includes("NARRATION") || h.includes("DESCRIPTION") || h.includes("PURPOSE") || h.includes("MEMO"));
   if (ref === -1 || amount === -1) return null;
-  return { ref, beneficiary, amount, dueDate };
+  return { ref, beneficiary, amount, dueDate, remark };
 }
 
 /**
@@ -225,6 +237,7 @@ export function paymentsFromSheet(sheet: TableSheet, cols: PaymentColumns): Paym
         beneficiary: cols.beneficiary >= 0 ? r[cols.beneficiary] : "",
         amount: cols.amount >= 0 ? r[cols.amount] : 0,
         dueDate: cols.dueDate >= 0 ? r[cols.dueDate] : "",
+        remark: cols.remark >= 0 ? r[cols.remark] : "",
       }, order),
     );
   }

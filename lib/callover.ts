@@ -39,6 +39,8 @@ export interface PaymentRow {
   beneficiary: string;
   amount: number;
   dueDateISO: string;
+  /** the payment file's own purpose/narration text, for name-free matching */
+  remark?: string;
 }
 
 export type CallOverStatus =
@@ -78,6 +80,8 @@ export interface PaymentVerdict {
   amountReturned: number;
   /** a statement line that looks like this payment but lacks the reference */
   probable?: { lineId: number; narration: string; reason: string };
+  /** ids of this payment's own reference-claimed debit lines (probable-match memory) */
+  debitLineIds?: number[];
   note?: string;
 }
 
@@ -255,7 +259,7 @@ export function toStatementLine(id: number, raw: {
 }
 
 export function toPaymentRow(id: number, raw: {
-  ref?: unknown; beneficiary?: unknown; amount?: unknown; dueDate?: unknown;
+  ref?: unknown; beneficiary?: unknown; amount?: unknown; dueDate?: unknown; remark?: unknown;
 }, dateOrder?: DateOrder): PaymentRow {
   const ref = String(raw.ref ?? "").trim();
   const candidates = refCandidates(ref);
@@ -267,6 +271,7 @@ export function toPaymentRow(id: number, raw: {
     beneficiary: String(raw.beneficiary ?? "").trim(),
     amount: parseAmount(raw.amount),
     dueDateISO: parseDateAny(raw.dueDate, dateOrder),
+    remark: String(raw.remark ?? "").trim(),
   };
 }
 
@@ -325,6 +330,20 @@ function nameTokens(beneficiary: string): string[] {
     .filter((t) => t.length >= 4)
     .sort((a, b) => b.length - a.length)
     .slice(0, 3);
+}
+
+/**
+ * Purpose words from the payment file's remark/narration column, when the
+ * parser stashed one there. GAPS vendor exports carry a Remark like
+ * "PYMT STAFF MEAL SUBSIDY FROM AUG 10-14" while the statement narration
+ * says "MEAL SUBSIDY FOR STAFF": different words, same purpose. A few
+ * stop-words keep generic filler from matching.
+ */
+function remarkTokensOf(payment: PaymentRow): string[] {
+  const remark = (payment as PaymentRow & { remark?: string }).remark ?? "";
+  const words = String(remark).toUpperCase().replace(/[^A-Z ]/g, " ").split(/\s+/);
+  const stop = new Set(["PYMT", "PAYMENT", "FROM", "FOR", "THE", "AND", "ALLOW", "COMM", "STAFF", "MONTHLY"]);
+  return [...new Set(words)].filter((w) => w.length >= 5 && !stop.has(w)).slice(0, 4);
 }
 
 /**
@@ -408,6 +427,7 @@ export function classifyPayment(payment: PaymentRow, lines: StatementLine[]): Pa
     amountSeen,
     amountReturned,
     note,
+    debitLineIds: paymentDebits.map((h) => h.lineId),
   };
 }
 
@@ -456,23 +476,42 @@ export function findProbable(
   payment: PaymentRow,
   lines: StatementLine[],
   claimed: Set<number>,
+  ownDebitIds?: number[],
 ): PaymentVerdict["probable"] {
   if (payment.amount <= 0) return undefined;
   const tokens = nameTokens(payment.beneficiary);
+  const remarks = remarkTokensOf(payment);
+  // GAPS vendor transfers round to naira on the statement, so a 1% band
+  // absorbs kobo differences without opening false matches.
+  const tolerance = Math.max(0.005, payment.amount * 0.01);
   for (const line of lines) {
-    if (claimed.has(line.id)) continue;
+    if (claimed.has(line.id) && !(ownDebitIds ?? []).includes(line.id)) continue;
     if (line.debit <= 0 || line.isChargeLine || line.isReversal) continue;
-    if (Math.abs(line.debit - payment.amount) > 0.005) continue;
-    if (dayDistance(line.dateISO, payment.dueDateISO) > 1) continue;
-    if (tokens.length === 0) continue;
+    if (Math.abs(line.debit - payment.amount) > tolerance) continue;
+    if (dayDistance(line.dateISO, payment.dueDateISO) > 3) continue;
     const upper = line.narration.toUpperCase();
-    const hitTokens = tokens.filter((t) => upper.includes(t));
-    if (hitTokens.length >= Math.min(2, tokens.length)) {
-      return {
-        lineId: line.id,
-        narration: line.narration,
-        reason: `Same amount (${line.debit.toLocaleString("en-NG")}), date within a day, and the name "${hitTokens.join(" ")}" appears in the narration.`,
-      };
+    if (tokens.length > 0) {
+      const hitTokens = tokens.filter((t) => upper.includes(t));
+      if (hitTokens.length >= Math.min(2, tokens.length)) {
+        return {
+          lineId: line.id,
+          narration: line.narration,
+          reason: `Same amount (${line.debit.toLocaleString("en-NG")}), date within 3 days, and the name "${hitTokens.join(" ")}" appears in the narration. GAPS payment references do not repeat on the statement, so this is the line to eyeball.`,
+        };
+      }
+    }
+    if (remarks.length > 0) {
+      // Remark words are weaker evidence than a name: a single purpose word
+      // over an exact amount and a close date is enough to flag, but the
+      // line must also not carry a different vendor's name tokens.
+      const hitRemarks = remarks.filter((t) => upper.includes(t));
+      if (hitRemarks.length >= Math.min(1, remarks.length)) {
+        return {
+          lineId: line.id,
+          narration: line.narration,
+          reason: `Same amount (${line.debit.toLocaleString("en-NG")}), date within 3 days, and the purpose "${hitRemarks.join(" ")}" appears in the narration. GAPS payment references do not repeat on the statement, so this is the line to eyeball.`,
+        };
+      }
     }
   }
   return undefined;
@@ -512,7 +551,7 @@ export function runCallOver(
   const lineIndex = new Map(lines.map((l) => [l.id, l]));
   for (const v of verdicts) {
     if (v.status === "Not found") {
-      v.probable = findProbable(v.payment, lines, claimed);
+      v.probable = findProbable(v.payment, lines, claimed, v.debitLineIds);
     }
     const cross = crossCheckMatch(v.payment, v, lineIndex);
     if (cross) v.note = v.note ? `${v.note} ${cross}` : cross;

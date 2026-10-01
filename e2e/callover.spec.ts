@@ -18,6 +18,10 @@ function csv(name: string): { name: string; mimeType: string; buffer: Buffer } {
   return { name, mimeType: "text/csv", buffer: readFileSync(fixture(name)) };
 }
 
+function xlsx(name: string): { name: string; mimeType: string; buffer: Buffer } {
+  return { name, mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer: readFileSync(fixture(name)) };
+}
+
 // Upload through the two real file inputs (first statement, then payments).
 // Each change event replaces that zone's files, which mirrors the app.
 async function upload(page: Page, statements: string[], payments: string[]) {
@@ -97,6 +101,36 @@ test("smoke: show-all toggle reveals every orphan", async ({ page }) => {
   await orphans.getByRole("button", { name: "Hide" }).click();
   await expect(orphans.getByRole("button", { name: "Show all 12" })).toBeVisible();
   await expect(orphans.locator("tbody tr")).toHaveCount(5);
+});
+
+test("smoke: GAPS vendor payment exports parse and run against a GT statement", async ({ page }) => {
+  await page.goto("/callover");
+
+  // The co-op's real shape: an xlsx statement plus four one-row vendor
+  // payment workbooks whose references never repeat on the statement.
+  const inputs = page.locator('input[type="file"]');
+  await expect(inputs).toHaveCount(2);
+  await inputs.nth(0).setInputFiles([xlsx("callover-gaps-statement.xlsx")]);
+  await expect(page.getByText(/statement lines from \d+ files?/)).toBeVisible({ timeout: 15_000 });
+  await inputs.nth(1).setInputFiles([
+    xlsx("callover-gaps-pay-8846.xlsx"),
+    xlsx("callover-gaps-pay-8847.xlsx"),
+    xlsx("callover-gaps-pay-8848.xlsx"),
+    xlsx("callover-gaps-pay-8849.xlsx"),
+  ]);
+  await expect(page.getByText("4 payments from 4 files")).toBeVisible({ timeout: 15_000 });
+
+  await runCallOver(page);
+
+  // No payment error, no silent drop: all four classify.
+  await expect(page.getByText(/no sheet looked like a payment list/)).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Payments to look at (4)" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /GTB\/A\/008848\/1 .*Not found/ })).toBeVisible();
+
+  // The Giwa payment gets a probable match on the real transport debit.
+  await page.getByRole("button", { name: /GTB\/A\/008848\/1 .*Not found/ }).click();
+  await expect(page.getByText(/Probable match:/)).toBeVisible();
+  await expect(page.getByText(/GIWA SIDIKAT ABIKE/i).first()).toBeVisible();
 });
 
 test("smoke: session restores on reload and Clear now wipes it", async ({ page }) => {
