@@ -85,7 +85,7 @@ export function buildReportHtml(result: CallOverResult, meta: ReportMeta): strin
 
   const problemsHtml =
     problems.length === 0
-      ? `<p style="font-size:10pt;color:${ink}">Every payment is accounted for. Nothing to chase.</p>`
+      ? `<p style="font-size:10pt;color:${ink}">Every payment uploaded was seen in the Statement, Thank you.!</p>`
       : `<table style="width:100%;border-collapse:collapse">
     <thead><tr><th style="${th}">REFERENCE</th><th style="${th}">NAME</th><th style="${th + ";" + num}">AMOUNT</th><th style="${th}">STATUS</th></tr></thead>
     <tbody>${problems

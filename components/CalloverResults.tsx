@@ -252,60 +252,23 @@ export function CalloverResults({
         <Tile label="Not found" value={totals.notFound} tone="text-stamp" />
       </div>
 
-      {/* Per-bank breakdown: appears when several statement files were merged */}
-      {result.banks && result.banks.length > 1 && (
-        <section aria-labelledby="banks-heading" className="mb-6">
-          <h3 id="banks-heading" className="eyebrow mb-2">
-            Statements in this run ({result.banks.length})
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="ledger ledger--compact">
-              <thead>
-                <tr>
-                  <th scope="col">File</th>
-                  <th scope="col">Bank</th>
-                  <th scope="col" className="!text-right">Lines</th>
-                  <th scope="col" className="!text-right">Debits</th>
-                  <th scope="col" className="!text-right">Credits</th>
-                  <th scope="col" className="!text-right">Debit total</th>
-                  <th scope="col">Dates</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.banks.map((b) => (
-                  <tr key={b.file}>
-                    <td className="text-xs whitespace-nowrap">{b.file}</td>
-                    <td className="whitespace-normal">{b.bank}</td>
-                    <td className="num">{b.lines.toLocaleString()}</td>
-                    <td className="num">{b.debits.toLocaleString()}</td>
-                    <td className="num">{b.credits.toLocaleString()}</td>
-                    <td className="num">{naira(b.debitTotal)}</td>
-                    <td className="text-xs whitespace-nowrap">{b.dateSpan}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
       {/* Order: problems first, then orphans, then successful payments */}
       <section aria-labelledby="problems-heading" data-area="problems" className="mb-6">
         <div className="flex items-center justify-between gap-3 mb-2">
           <h3 id="problems-heading" className="eyebrow">
-            Payments that did Failed/Invalid ({problems.length})
+            Payments that Failed/Invalid ({problems.length})
           </h3>
           <button
             type="button"
             onClick={() => printSingle("problems")}
             className="print:hidden text-sm text-ink-soft hover:text-stamp transition-colors shrink-0 py-1 -my-1"
-            aria-label="Print only the Payments that did Failed/Invalid table"
+            aria-label="Print only the Payments that Failed/Invalid table"
           >
             Print
           </button>
         </div>
         {problems.length === 0 ? (
-          <p className="text-sm text-leaf">Every payment is accounted for. Nothing to chase.</p>
+          <p className="text-sm text-leaf">Every payment uploaded was seen in the Statement, Thank you.!</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="ledger">

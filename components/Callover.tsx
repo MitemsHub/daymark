@@ -132,12 +132,12 @@ export function Callover() {
   const run = useCallback(() => {
     if (!data || running) return;
     setRunning(true);
-    // A beat of matching animation so short runs are still visible. The
-    // matching itself runs in a Web Worker, so huge files never freeze the
-    // upload UI while it spins.
-    const work = new Promise<CallOverResult>((resolve) => {
-      setTimeout(() => void runCallOverAsync(data.payments, data.statement).then(resolve), 700);
-    });
+    // Matching starts immediately in the Web Worker; the spinner only ever
+    // shows for a short beat so quick runs stay visible. Big runs finish
+    // sooner because the compute overlaps the beat instead of following it.
+    const compute = runCallOverAsync(data.payments, data.statement);
+    const beat = new Promise<void>((resolve) => setTimeout(resolve, 700));
+    const work = Promise.all([compute, beat]).then(([r]) => r);
     work.then((r) => {
       setResult(r);
       setRunning(false);

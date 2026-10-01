@@ -13,7 +13,9 @@ import {
 import { DateField, StatRow, StatusNote } from "@/components/ui";
 
 export function DateCalculator() {
-  const [start, setStart] = useState(todayISO());
+  // Fields start empty so the dd/mm/yyyy placeholder shows, like the end
+  // date; results appear once both dates are entered.
+  const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
 
   const result = useMemo(() => {

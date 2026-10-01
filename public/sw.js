@@ -13,7 +13,7 @@
 //
 // Bump CACHE_VERSION whenever the shell changes shape.
 
-const CACHE_VERSION = "daymark-v3";
+const CACHE_VERSION = "daymark-v4";
 const BASE = new URL(self.registration.scope).pathname.replace(/\/$/, "");
 const SHELL = [
   `${BASE}/`,

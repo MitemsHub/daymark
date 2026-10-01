@@ -7,10 +7,13 @@ test("calculator dates are entered day-first", async ({ page }) => {
 
   const start = page.locator("#calc-start-display");
   const end = page.locator("#calc-end-display");
-  await expect(start).toHaveValue(/\d{2}\/\d{2}\/\d{4}/);
+  // Both fields start empty so the day-first placeholder shows.
+  await expect(start).toHaveAttribute("placeholder", "dd/mm/yyyy");
   await expect(end).toHaveAttribute("placeholder", "dd/mm/yyyy");
 
-  // Type an end date; slashes insert themselves and the result appears.
+  // Type start then end; slashes insert themselves and the result appears.
+  await start.fill("01/10/2026");
+  await expect(start).toHaveValue("01/10/2026");
   await end.fill("31/12/2026");
   await expect(end).toHaveValue("31/12/2026");
   await expect(page.getByText("31 December 2026")).toBeVisible();

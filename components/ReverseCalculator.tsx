@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { formatLong, parseISODate, reverseCalculate, todayISO } from "@/lib/dates";
+import { formatLong, parseISODate, reverseCalculate } from "@/lib/dates";
 import { DateField, FieldLabel, StatusNote } from "@/components/ui";
 
 export function ReverseCalculator() {
-  const [start, setStart] = useState(todayISO());
-  const [days, setDays] = useState("30");
+  // Same professional look as the top calculator: empty until entered.
+  const [start, setStart] = useState("");
+  const [days, setDays] = useState("");
   const [mode, setMode] = useState<"add" | "subtract">("add");
 
   const n = Number(days);
@@ -17,8 +18,11 @@ export function ReverseCalculator() {
     return reverseCalculate(start, n, mode);
   }, [start, n, mode]);
 
-  const error =
-    !start
+  // Untouched fields stay quiet; only a half-filled form shows guidance.
+  const touched = start !== "" || days !== "";
+  const error = !touched
+    ? null
+    : !start
       ? "Pick a start date."
       : !Number.isInteger(n) || n < 1
         ? "Enter a whole number of days (1 or more)."
@@ -39,6 +43,7 @@ export function ReverseCalculator() {
             type="number"
             min={1}
             inputMode="numeric"
+            placeholder="e.g. 30"
             value={days}
             onChange={(e) => setDays(e.target.value)}
             className="tnum w-full border hairline bg-white rounded-sm px-3 py-2"
