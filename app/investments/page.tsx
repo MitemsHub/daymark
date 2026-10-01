@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { InvestmentExplorer } from "@/components/InvestmentExplorer";
+import { InvestmentExplorerDeferred } from "@/components/InvestmentExplorerDeferred";
 import { LoanRatesTable, BondRatesTable } from "@/components/RatesTables";
 import { bondRates, loanRates } from "@/data/coopRates";
 
@@ -42,7 +42,7 @@ export default function InvestmentsPage() {
         <h2 id="series-heading" className="eyebrow mb-3">
           Investment series
         </h2>
-        <InvestmentExplorer />
+        <InvestmentExplorerDeferred />
       </section>
     </div>
   );

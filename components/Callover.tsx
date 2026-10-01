@@ -1,11 +1,19 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import { type CallOverResult } from "@/lib/callover";
 import { runCallOverAsync } from "@/lib/calloverClient";
 import { buildReportHtml, printReportHtml } from "@/lib/report";
 import { CalloverUploader, type CallOverData } from "@/components/CalloverUploader";
-import { CalloverResults } from "@/components/CalloverResults";
+
+// The results UI only exists after a run, so its code loads on demand (the
+// fetch happens in parallel with the worker compute and the spinner beat)
+// instead of weighing down the page's first paint.
+const CalloverResults = dynamic(
+  () => import("@/components/CalloverResults").then((m) => ({ default: m.CalloverResults })),
+  { ssr: false },
+);
 
 const SESSION_KEY = "daymark.callover.v2";
 const SESSION_TTL_MS = 60 * 60 * 1000; // one hour after results show
