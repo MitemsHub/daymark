@@ -177,6 +177,28 @@ export function refCandidates(raw: string): string[] {
   return [...out].sort((a, b) => b.length - a.length);
 }
 
+/**
+ * Reference tokens hiding in prose, for payment files with no Reference
+ * column at all. First Bank's vendor export writes the reference as the
+ * first word of the narration ("FBN/000169/1 - Interest on Special
+ * Savings"), so the whole cell cannot be the key: only the token that
+ * reads like a bank reference can. A token qualifies when it mixes digits
+ * and separators around them (FBN0001691), which purpose words never do.
+ */
+export function refTokensInText(text: string): string[] {
+  const out = new Set<string>();
+  for (const token of String(text ?? "").split(/[\s,;]+/)) {
+    const norm = normalizeRef(token);
+    if (norm.length < 6 || norm.length > 24) continue;
+    const digits = (norm.match(/[0-9]/g) ?? []).length;
+    const letters = (norm.match(/[A-Z]/g) ?? []).length;
+    if (digits >= 3 && letters >= 1 && digits >= letters && /[A-Z]/.test(norm[0] ?? "")) {
+      out.add(norm);
+    }
+  }
+  return [...out].sort((a, b) => b.length - a.length);
+}
+
 /** Parse naira amounts like "NGN 410,000.00", "150000", "4,599.90". */
 export function parseAmount(raw: unknown): number {
   if (typeof raw === "number") return Number.isFinite(raw) ? Math.round(raw * 100) / 100 : 0;
@@ -262,7 +284,10 @@ export function toPaymentRow(id: number, raw: {
   ref?: unknown; beneficiary?: unknown; amount?: unknown; dueDate?: unknown; remark?: unknown;
 }, dateOrder?: DateOrder): PaymentRow {
   const ref = String(raw.ref ?? "").trim();
-  const candidates = refCandidates(ref);
+  // When the ref cell is prose that carries the reference (First Bank's
+  // "FBN/000169/1 - Interest on Special Savings"), the prose tokens are the
+  // usable keys: FBN0001691, not the whole sentence.
+  const candidates = [...new Set([...refCandidates(ref), ...refTokensInText(ref)])].sort((a, b) => b.length - a.length);
   return {
     id,
     ref,
@@ -488,7 +513,10 @@ export function findProbable(
     if (claimed.has(line.id) && !(ownDebitIds ?? []).includes(line.id)) continue;
     if (line.debit <= 0 || line.isChargeLine || line.isReversal) continue;
     if (Math.abs(line.debit - payment.amount) > tolerance) continue;
-    if (dayDistance(line.dateISO, payment.dueDateISO) > 3) continue;
+    // A payment file with no date column (First Bank's vendor export)
+    // leaves dueDateISO empty; dayDistance then returns 99 and would kill
+    // every candidate, so the date gate only bites when a date exists.
+    if (payment.dueDateISO && dayDistance(line.dateISO, payment.dueDateISO) > 3) continue;
     const upper = line.narration.toUpperCase();
     if (tokens.length > 0) {
       const hitTokens = tokens.filter((t) => upper.includes(t));

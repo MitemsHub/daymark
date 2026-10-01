@@ -4,6 +4,7 @@ import {
   parseAmount,
   parseDateAny,
   countRefOccurrences,
+  refTokensInText,
   toStatementLine,
   toPaymentRow,
   classifyPayment,
@@ -215,6 +216,44 @@ describe("runCallOver totals and orphans", () => {
     const r = runCallOver([P(1, "ZB/A/006575/75", "NIAJA NWACHUKWU", 45000)], [line]);
     expect(r.verdicts[0].status).toBe("Paid");
     expect(r.verdicts[0].note).toBeUndefined();
+  });
+});
+
+describe("First Bank payments whose reference lives in the narration text", () => {
+  // FBN vendor exports carry no Reference column: "FBN/000169/1 - Interest
+  // on Special Savings" is the whole narration cell. The statement repeats
+  // the bare token FBN/000169/1, so only the prose-extracted candidate matches.
+  const Pn = (id: number, narration: string, name: string, amount: number): ReturnType<typeof toPaymentRow> =>
+    toPaymentRow(id, { ref: narration, beneficiary: name, amount });
+
+  it("extracts FBN0001691 from the prose and matches the statement token", () => {
+    const payment = Pn(1, "FBN/000169/1 - Interest on Special Savings", "ABUBAKAR MANSIRBALELE", 240000);
+    expect(payment.candidates).toContain("FBN0001691");
+    const lines = [
+      L(1, "Instant Payment Outward 000013260803183939000114912026 FBN/000169/1 INTEREST ON SPECIAL SAVINGS TO ABUBAKAR MANSIR BALELE", 240000, 0, "2026-10-01"),
+    ];
+    const result = runCallOver([payment], lines);
+    expect(result.verdicts[0].status).toBe("Paid");
+    expect(result.verdicts[0].foundCount).toBe(1);
+  });
+
+  it("no date column still classifies: the date gate never bites on an empty dueDateISO", () => {
+    const payment = Pn(1, "FBN/000169/2 - Principal Payment at termination.", "OLAITAN ABDULRAFIUOLASUNKANMI", 2000000);
+    expect(payment.dueDateISO).toBe("");
+    const lines = [
+      L(1, "TRANSFER BETWEEN CUSTOMERS VIA GAPS FBN/000169/2 PRINCIPAL PAYMENT AT TERMINATION TO OLAITAN ABDULRAFIU OLASUNKANMI", 2000000, 0, "2026-10-02"),
+    ];
+    const result = runCallOver([payment], lines);
+    expect(result.verdicts[0].status).toBe("Paid");
+  });
+
+  it("still avoids matching a longer reference that continues with a digit", () => {
+    const payment = Pn(1, "FBN/000169/1 - Interest on Special Savings", "ABUBAKAR MANSIRBALELE", 240000);
+    const lines = [
+      L(1, "Instant Payment Outward FBN/000169/12 INTEREST ON SPECIAL SAVINGS", 240000, 0, "2026-10-01"),
+    ];
+    const result = runCallOver([payment], lines);
+    expect(result.verdicts[0].status).toBe("Not found");
   });
 });
 

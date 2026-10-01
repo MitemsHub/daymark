@@ -6,6 +6,7 @@
 import {
   toStatementLine,
   toPaymentRow,
+  refTokensInText,
   isChargeNarration,
   isReversalNarration,
   type StatementLine,
@@ -105,13 +106,21 @@ export async function readWorkbook(buf: ArrayBuffer): Promise<ParsedWorkbook> {
       (h) => h.includes("DEBIT") || h.includes("CREDIT") || h.includes("WITHDRAWAL") || h.includes("DEPOSIT"),
     );
     const hasStatementCols = hasDate && hasMoneySides;
-    // Two payment shapes so far: the Zenith-style list (TRANSACTION
-    // REFERENCE + AMOUNT) and the GAPS vendor export (Reference +
-    // PaymentAmount, camel-cased). A bare "AMOUNT" column plus a reference
-    // column also counts, as long as the sheet never read as a statement.
+    // Three payment shapes so far: the Zenith-style list (TRANSACTION
+    // REFERENCE + AMOUNT), the GAPS vendor export (Reference +
+    // PaymentAmount, camel-cased), and First Bank's vendor export
+    // (BeneficiaryName + Naration + Amount with no reference column: the
+    // reference rides inside the narration text). The last shape classifies
+    // by name + narration + amount, which a statement never has (its money
+    // is split across debit and credit columns). The name test is strict:
+    // a Zenith statement's "Description/Payee/Memo" contains PAYEE but is
+    // no name column, and a loose test would steal statements.
     const hasRef = H.some((h) => h.includes("TRANSACTION REFERENCE") || h === "REFERENCE" || h.includes("REF NO"));
     const hasAmount = H.some((h) => h.includes("AMOUNT"));
-    const hasPaymentCols = hasRef && hasAmount;
+    const hasName = H.some((h) => h === "BENEFICIARY NAME" || h === "BENEFICIARYNAME" || h === "VENDOR NAME" || h === "VENDORNAME" || h.endsWith("NAME"));
+    const hasNarration = H.some((h) => h.includes("NARATION") || h.includes("NARRATION") || h.includes("REMARK") || h.includes("DESCRIPTION"));
+    const hasReflessPaymentCols = hasName && hasNarration && hasAmount && findPaymentColumns(s) !== null;
+    const hasPaymentCols = (hasRef && hasAmount) || hasReflessPaymentCols;
     if (hasPaymentCols) paymentSheets.push(s.name);
     else if (hasStatementCols) statementSheets.push(s.name);
   }
@@ -158,6 +167,9 @@ export interface PaymentColumns {
 
 export function findPaymentColumns(sheet: TableSheet): PaymentColumns | null {
   const H = sheet.headers.map(normalizeHeader);
+  // Reference column when the file has one; when it does not (First Bank's
+  // Naration column), the narration column doubles as the ref source and
+  // the engine pulls reference-shaped tokens out of its text.
   const ref = H.findIndex(
     (h) =>
       h.includes("TRANSACTION REFERENCE") ||
@@ -175,8 +187,19 @@ export function findPaymentColumns(sheet: TableSheet): PaymentColumns | null {
   const beneficiary = exactName >= 0 ? exactName : H.findIndex((h) => h.includes("BENEFICIARY") || h.includes("VENDOR") || h.includes("PAYEE") || h.includes("NAME"));
   const amount = H.findIndex((h) => h === "AMOUNT" || h.includes("AMOUNT") || h.includes("VALUE"));
   const dueDate = H.findIndex((h) => h.includes("DUE DATE") || h.includes("PAYMENT DATE") || h.includes("PAYMENTDATE") || h.includes("VALUE DATE") || h === "DATE");
-  const remark = H.findIndex((h) => h.includes("REMARK") || h.includes("NARRATION") || h.includes("DESCRIPTION") || h.includes("PURPOSE") || h.includes("MEMO"));
-  if (ref === -1 || amount === -1) return null;
+  // NARATION (First Bank's misspelling) must match before NARRATION would;
+  // includes("NARRATION") misses it, so check the NARATION stem directly.
+  const remark = H.findIndex((h) => h.includes("REMARK") || h.includes("NARATION") || h.includes("NARRATION") || h.includes("DESCRIPTION") || h.includes("PURPOSE") || h.includes("MEMO"));
+  if (ref === -1) {
+    // Ref-less shape: name + narration + amount must all exist, and the
+    // narration text must actually hold reference-shaped tokens, else a
+    // plain memo list would classify as payments with garbage refs.
+    if (beneficiary === -1 || remark === -1 || amount === -1) return null;
+    const sample = sheet.rows.slice(0, 20).map((r) => String(r[remark] ?? ""));
+    if (!sample.some((t) => refTokensInText(t).length > 0)) return null;
+    return { ref: remark, beneficiary, amount, dueDate, remark };
+  }
+  if (amount === -1) return null;
   return { ref, beneficiary, amount, dueDate, remark };
 }
 

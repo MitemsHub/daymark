@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
 import { readWorkbook, findStatementColumns, statementLinesFromSheet, findPaymentColumns, paymentsFromSheet } from "./tableParse";
+import { refTokensInText } from "./callover";
 
 // Build a workbook buffer from rows, the way a bank export arrives.
 function workbookFromRows(rows: unknown[][], sheetName = "Sheet1"): ArrayBuffer {
@@ -155,6 +156,56 @@ describe("the GAPS vendor payment export", () => {
     expect(payments[0].amount).toBe(120000);
     expect(payments[0].dueDateISO).toBe("2026-08-20");
     expect(payments[0].remark).toContain("LUNCH ALLOW");
+  });
+});
+
+// First Bank vendor payment export: no reference and no date column. The
+// reference rides as the first word of the misspelled "Naration" column
+// ("FBN/000169/1 - Interest on Special Savings").
+const FBN_PAYMENT_ROWS: unknown[][] = [
+  ["DebitAccountNo", "CreditAccountNo", "CreditBankCode", "BeneficiaryName", "Naration", "Amount"],
+  ["2035633079", "1346243013", "214", "ABUBAKAR MANSIRBALELE", "FBN/000169/1 - Interest on Special Savings", "240000"],
+  ["2035633079", "0023805452", "058", "OLAITAN ABDULRAFIUOLASUNKANMI", "FBN/000169/5 - Principal Payment at termination.", "2000000"],
+];
+
+describe("the First Bank vendor payment export", () => {
+  it("classifies by name, narration and amount without a reference column", async () => {
+    const wb = await readWorkbook(workbookFromRows(FBN_PAYMENT_ROWS));
+    expect(wb.paymentSheets).toEqual(["Sheet1"]);
+    expect(wb.statementSheets).toEqual([]);
+  });
+
+  it("reads the reference out of the Naration text and leaves the date empty", async () => {
+    const wb = await readWorkbook(workbookFromRows(FBN_PAYMENT_ROWS));
+    const cols = findPaymentColumns(wb.sheets[0]);
+    expect(cols).not.toBeNull();
+    expect(cols!.ref).toBe(4); // Naration doubles as the ref source
+    expect(cols!.beneficiary).toBe(3);
+    expect(cols!.amount).toBe(5);
+    expect(cols!.dueDate).toBe(-1);
+    const payments = paymentsFromSheet(wb.sheets[0], cols!);
+    expect(payments).toHaveLength(2);
+    expect(payments[0].ref).toContain("FBN/000169/1");
+    expect(payments[0].candidates).toContain("FBN0001691");
+    expect(payments[0].beneficiary).toBe("ABUBAKAR MANSIRBALELE");
+    expect(payments[0].amount).toBe(240000);
+    expect(payments[0].dueDateISO).toBe("");
+  });
+
+  it("rejects a memo list whose narration holds no reference tokens", async () => {
+    const rows: unknown[][] = [
+      ["BeneficiaryName", "Naration", "Amount"],
+      ["ALICE JOHNSON", "rent reimbursement for October", "45000"],
+    ];
+    const wb = await readWorkbook(workbookFromRows(rows));
+    expect(wb.paymentSheets).toEqual([]);
+  });
+});
+
+describe("refTokensInText", () => {
+  it("finds the bank reference inside prose and skips purpose words", () => {
+    expect(refTokensInText("FBN/000169/1 - Interest on Special Savings")).toEqual(["FBN0001691"]);
+    expect(refTokensInText("rent reimbursement for October")).toEqual([]);
   });
 });
 

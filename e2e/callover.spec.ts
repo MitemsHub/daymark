@@ -133,6 +133,33 @@ test("smoke: GAPS vendor payment exports parse and run against a GT statement", 
   await expect(page.getByText(/GIWA SIDIKAT ABIKE/i).first()).toBeVisible();
 });
 
+test("smoke: First Bank vendor payment exports match by reference inside the narration", async ({ page }) => {
+  await page.goto("/callover");
+
+  // FBN shape: no Reference and no date column; the reference is the first
+  // token of the Naration text ("FBN/000169/1 - Interest on Special Savings").
+  const inputs = page.locator('input[type="file"]');
+  await expect(inputs).toHaveCount(2);
+  await inputs.nth(0).setInputFiles([xlsx("callover-fbn-statement.xlsx")]);
+  await expect(page.getByText(/statement lines from \d+ files?/)).toBeVisible({ timeout: 15_000 });
+  await inputs.nth(1).setInputFiles([xlsx("callover-fbn-payments.xlsx")]);
+  await expect(page.getByText("4 payments from 1 file")).toBeVisible({ timeout: 15_000 });
+
+  await runCallOver(page);
+
+  // All four references were found on the statement: three straight Paid
+  // and one Paid whose stamp duty line shares the reference.
+  await expect(page.getByText(/no sheet looked like a payment list/)).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Payments to look at (0)" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Successful payments (4)" })).toBeVisible();
+  await page.getByRole("button", { name: "Show", exact: true }).click();
+  await expect(page.getByText("ABUBAKAR MANSIRBALELE")).toBeVisible();
+  await expect(page.getByText("DIDIGU CHIZOBAEMMANUELLA")).toBeVisible();
+
+  // The unrelated 75,000 debit is the only orphan.
+  await expect(page.getByRole("heading", { name: /No payment to compare with the following \(1, 75,000\.00\)/ })).toBeVisible();
+});
+
 test("smoke: session restores on reload and Clear now wipes it", async ({ page }) => {
   await page.goto("/callover");
 
