@@ -51,7 +51,7 @@ export function InvestmentExplorer() {
         Investment series reference
       </h2>
 
-      <div className="grid sm:grid-cols-3 gap-4 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
         <div>
           <FieldLabel htmlFor="inv-search">Search</FieldLabel>
           <input

@@ -85,7 +85,7 @@ export function SeriesEditor({ rows, onSave }: { rows: InvestmentSeries[]; onSav
       <ul className="space-y-4">
         {draft.map((s) => (
           <li key={s.id} className="border hairline rounded-sm bg-white/50">
-            <div className="p-3 grid sm:grid-cols-[1.5fr_1fr_1fr_auto_auto] gap-3 items-end border-b hairline">
+            <div className="p-3 grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1fr_auto_auto] gap-3 items-end border-b hairline">
               <div>
                 <FieldLabel htmlFor={`s-name-${s.id}`}>Series name</FieldLabel>
                 <input
@@ -154,7 +154,7 @@ export function SeriesEditor({ rows, onSave }: { rows: InvestmentSeries[]; onSav
             <div className="p-3 space-y-2">
               <p className="eyebrow">Interest options</p>
               {s.options.map((o, i) => (
-                <div key={i} className="grid sm:grid-cols-[1.2fr_0.7fr_1.6fr_0.7fr_auto] gap-2 items-end">
+                <div key={i} className="grid grid-cols-1 sm:grid-cols-[1.2fr_0.7fr_1.6fr_0.7fr_auto] gap-2 items-end">
                   <div>
                     <FieldLabel htmlFor={`o-type-${s.id}-${i}`}>Type</FieldLabel>
                     <input

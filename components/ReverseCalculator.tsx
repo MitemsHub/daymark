@@ -34,7 +34,7 @@ export function ReverseCalculator() {
         Reverse calculation
       </h3>
 
-      <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-4 items-end mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end mb-4">
         <DateField id="rev-start" label="Start date" value={start} onChange={setStart} />
         <div>
           <FieldLabel htmlFor="rev-days">Number of days</FieldLabel>

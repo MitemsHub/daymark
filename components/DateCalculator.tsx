@@ -42,7 +42,7 @@ export function DateCalculator() {
         Date range calculator
       </h2>
 
-      <div className="grid sm:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <DateField id="calc-start" label="Start date" value={start} onChange={setStart} />
         <DateField id="calc-end" label="End date" value={end} onChange={setEnd} />
       </div>
@@ -51,7 +51,7 @@ export function DateCalculator() {
       {result?.error && <StatusNote kind="error">{result.error}</StatusNote>}
 
       {result && result.error === null && (
-        <div key={`${result.start}-${result.end}`} className="grid lg:grid-cols-[1.2fr_1fr] gap-8 swap-in">
+        <div key={`${result.start}-${result.end}`} className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-8 swap-in">
           <div>
             <div className="flex flex-wrap items-end gap-x-10 gap-y-4 pb-5 border-b hairline">
               <div title="Both the start date and the end date are counted in this total.">

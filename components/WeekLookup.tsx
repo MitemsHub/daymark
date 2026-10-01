@@ -47,7 +47,7 @@ export function WeekLookup() {
   }, [year, weekNum]);
 
   return (
-    <section aria-labelledby="lookup-heading" className="grid md:grid-cols-2 gap-10">
+    <section aria-labelledby="lookup-heading" className="grid grid-cols-1 md:grid-cols-2 gap-10">
       <div>
         <h2 id="lookup-heading" className="eyebrow mb-4">
           Look up a date

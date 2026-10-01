@@ -43,7 +43,7 @@ export function AccountsEditor({ rows, onSave }: { rows: CoopAccount[]; onSave(r
     >
       <ul className="space-y-3">
         {draft.map((a) => (
-          <li key={a.id} className="grid sm:grid-cols-[0.6fr_1.4fr_1.1fr_1.6fr_auto] gap-2 items-end border hairline rounded-sm bg-white/50 p-3">
+          <li key={a.id} className="grid grid-cols-1 sm:grid-cols-[0.6fr_1.4fr_1.1fr_1.6fr_auto] gap-2 items-end border hairline rounded-sm bg-white/50 p-3">
             <div>
               <FieldLabel htmlFor={`a-code-${a.id}`}>Account code</FieldLabel>
               <input

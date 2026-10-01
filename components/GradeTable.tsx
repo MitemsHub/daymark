@@ -132,9 +132,9 @@ export function GradeTable({ grades }: { grades: MemberGrade[] }) {
               </p>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                 {COLUMNS.map((col) => (
-                  <div key={col.key} className="flex justify-between gap-2">
+                  <div key={col.key} className="flex justify-between gap-2 min-w-0">
                     <dt className="text-ink-soft">{col.label}</dt>
-                    <dd className="tnum font-medium">{formatLimit(g[col.key as keyof MemberGrade] as number)}</dd>
+                    <dd className="tnum font-medium min-w-0 break-words text-right">{formatLimit(g[col.key as keyof MemberGrade] as number)}</dd>
                   </div>
                 ))}
               </dl>

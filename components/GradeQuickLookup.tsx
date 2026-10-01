@@ -36,22 +36,22 @@ export function GradeQuickLookup({ grades }: { grades: MemberGrade[] }) {
         {selected ? (
           <div key={selected.id} className="border-l-4 border-stamp pl-5 swap-in">
             <p className="display text-xl mb-4">{selected.name}</p>
-            <dl className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-5">
+            <dl className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 sm:gap-x-8 gap-y-5">
               <div className="border-t-2 border-ink pt-3">
                 <dt className="eyebrow mb-1.5">Credit limit</dt>
-                <dd className="tnum text-2xl sm:text-3xl font-semibold">{formatLimit(selected.creditLimit)}</dd>
+                <dd className="tnum text-xl sm:text-3xl font-semibold min-w-0 break-words">{formatLimit(selected.creditLimit)}</dd>
               </div>
               <div className="border-t-2 border-ink pt-3">
                 <dt className="eyebrow mb-1.5">Min. contribution</dt>
-                <dd className="tnum text-2xl sm:text-3xl font-semibold">{formatLimit(selected.minContribution)}</dd>
+                <dd className="tnum text-xl sm:text-3xl font-semibold min-w-0 break-words">{formatLimit(selected.minContribution)}</dd>
               </div>
               <div className="border-t-2 border-ink pt-3">
                 <dt className="eyebrow mb-1.5">Global limit</dt>
-                <dd className="tnum text-2xl sm:text-3xl font-semibold">{formatLimit(selected.globalLimit)}</dd>
+                <dd className="tnum text-xl sm:text-3xl font-semibold min-w-0 break-words">{formatLimit(selected.globalLimit)}</dd>
               </div>
               <div className="border-t-2 border-ink pt-3">
                 <dt className="eyebrow mb-1.5">Annual limit</dt>
-                <dd className="tnum text-2xl sm:text-3xl font-semibold">{formatLimit(selected.annualLimit)}</dd>
+                <dd className="tnum text-xl sm:text-3xl font-semibold min-w-0 break-words">{formatLimit(selected.annualLimit)}</dd>
               </div>
             </dl>
           </div>

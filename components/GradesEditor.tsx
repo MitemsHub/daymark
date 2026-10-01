@@ -57,7 +57,7 @@ export function GradesEditor({ rows, onSave }: { rows: MemberGrade[]; onSave(row
       <ul className="space-y-3">
         {draft.map((g) => (
           <li key={g.id} className="border hairline rounded-sm p-3 bg-white/50">
-            <div className="grid sm:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_auto] gap-3 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_auto] gap-3 items-end">
               <div>
                 <FieldLabel htmlFor={`g-name-${g.id}`}>Name</FieldLabel>
                 <input

@@ -55,7 +55,7 @@ export function RatesEditor<T extends { id: string; name: string; rate: number |
     >
       <ul className="space-y-3">
         {draft.map((r) => (
-          <li key={r.id} className="grid sm:grid-cols-[1.8fr_0.9fr_auto] gap-2 items-end border hairline rounded-sm bg-white/50 p-3">
+          <li key={r.id} className="grid grid-cols-1 sm:grid-cols-[1.8fr_0.9fr_auto] gap-2 items-end border hairline rounded-sm bg-white/50 p-3">
             <div>
               <FieldLabel htmlFor={`r-name-${r.id}`}>Name</FieldLabel>
               <input
