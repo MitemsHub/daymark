@@ -74,7 +74,7 @@ export function ReverseCalculator() {
       {result && !error && (
         <div key={`${mode}-${result.resultISO}`} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 swap-in" aria-live="polite">
           <p className="eyebrow">
-            {mode === "add" ? "Counting the end date in (+ Today style)" : "Counting elapsed days back (− Today style)"}
+            {mode === "add" ? "Counting the end date in (+ Today)" : "Counting elapsed days back (− Today)"}
           </p>
           <p className="display text-3xl sm:text-4xl">{formatLong(result.resultISO)}</p>
           <p className="text-sm text-ink-soft tnum">{parseISODate(result.resultISO).toLocaleDateString("en-GB", { weekday: "long" })}</p>
