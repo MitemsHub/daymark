@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { DateCalculator } from "@/components/DateCalculator";
 import { ReverseCalculator } from "@/components/ReverseCalculator";
-import { CurrentWeekWidget } from "@/components/CurrentWeekWidget";
 import { AccountsWidget } from "@/components/AccountsWidget";
 
 export const metadata: Metadata = {
@@ -27,10 +26,7 @@ export default function HomePage() {
         <h2 id="quick-heading" className="eyebrow mb-5">
           Quick reference
         </h2>
-        <div className="grid sm:grid-cols-2 gap-8">
-          <CurrentWeekWidget />
-          <AccountsWidget />
-        </div>
+        <AccountsWidget />
       </section>
     </div>
   );
