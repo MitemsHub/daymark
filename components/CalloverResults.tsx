@@ -263,9 +263,37 @@ export function CalloverResults({
         </section>
       )}
 
+      {/* Order: problems first, then orphans, then successful payments */}
+      <section aria-labelledby="problems-heading" className="mb-6">
+        <h3 id="problems-heading" className="eyebrow mb-2">
+          Payments to look at ({problems.length})
+        </h3>
+        {problems.length === 0 ? (
+          <p className="text-sm text-leaf">Every payment is accounted for. Nothing to chase.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="ledger">
+              <thead>
+                <tr>
+                  <th scope="col">Reference</th>
+                  <th scope="col">Name</th>
+                  <th scope="col" className="!text-right">Amount</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {problems.map((v) => (
+                  <VerdictRow key={v.payment.id} v={v} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
       {/* Unexplained debits: short list by default, full list behind Show all */}
       {unexplainedDebits.length > 0 && (
-        <section className="mb-6" aria-labelledby="orphans-heading">
+        <section className="mb-8" aria-labelledby="orphans-heading">
           <div className="flex items-center justify-between gap-3 mb-2">
             <h3 id="orphans-heading" className="eyebrow">
               No payment to compare with the following ({unexplainedDebits.length}, {naira(totals.unexplainedDebitTotal)})
@@ -302,34 +330,6 @@ export function CalloverResults({
           </div>
         </section>
       )}
-
-      {/* Problems first */}
-      <section aria-labelledby="problems-heading" className="mb-8">
-        <h3 id="problems-heading" className="eyebrow mb-2">
-          Payments to look at ({problems.length})
-        </h3>
-        {problems.length === 0 ? (
-          <p className="text-sm text-leaf">Every payment is accounted for. Nothing to chase.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="ledger">
-              <thead>
-                <tr>
-                  <th scope="col">Reference</th>
-                  <th scope="col">Name</th>
-                  <th scope="col" className="!text-right">Amount</th>
-                  <th scope="col">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {problems.map((v) => (
-                  <VerdictRow key={v.payment.id} v={v} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
 
       {/* Successful payments: always rendered, screen-only users can collapse it */}
       <section aria-labelledby="paid-heading" className="print:mt-6">
