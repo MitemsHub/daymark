@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { DateCalculator } from "@/components/DateCalculator";
 import { ReverseCalculator } from "@/components/ReverseCalculator";
 import { CurrentWeekWidget } from "@/components/CurrentWeekWidget";
-import { ActiveSeriesWidget } from "@/components/ActiveSeriesWidget";
+import { AccountsWidget } from "@/components/AccountsWidget";
 
 export const metadata: Metadata = {
   title: "Date & Week Calculator",
@@ -29,7 +29,7 @@ export default function HomePage() {
         </h2>
         <div className="grid sm:grid-cols-2 gap-8">
           <CurrentWeekWidget />
-          <ActiveSeriesWidget />
+          <AccountsWidget />
         </div>
       </section>
     </div>

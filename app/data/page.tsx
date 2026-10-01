@@ -3,7 +3,7 @@ import { DataManager } from "@/components/DataManager";
 
 export const metadata: Metadata = {
   title: "Data",
-  description: "Edit the investment series and member grade reference data without touching code.",
+  description: "Edit the investment series, member grades and co-op accounts reference data without touching code.",
   robots: { index: false, follow: false },
 };
 

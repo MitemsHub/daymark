@@ -98,3 +98,32 @@ test("smoke: show-all toggle reveals every orphan", async ({ page }) => {
   await expect(orphans.getByRole("button", { name: "Show all 12" })).toBeVisible();
   await expect(orphans.locator("tbody tr")).toHaveCount(5);
 });
+
+test("smoke: session restores on reload and Clear now wipes it", async ({ page }) => {
+  await page.goto("/callover");
+
+  await upload(page, ["callover-smoke-statement.csv"], ["callover-smoke-payments.csv"]);
+  await runCallOver(page);
+  await expect(page.getByRole("heading", { name: "Payments to look at (3)" })).toBeVisible();
+
+  // A reload must restore the session: the run button comes back enabled
+  // from the stored files (results are never persisted, only the inputs).
+  await page.reload();
+  const run = page.getByRole("button", { name: "Run call-over" });
+  await expect(run).toBeEnabled({ timeout: 15_000 });
+  await expect(page.getByRole("timer")).toHaveCount(1);
+  await run.click();
+  await expect(page.getByRole("heading", { name: "Payments to look at (3)" })).toBeVisible({ timeout: 20_000 });
+
+  // Clear now wipes the session: back to the empty uploader, and storage
+  // holds no session, so a further reload cannot resurrect anything.
+  await page.getByRole("button", { name: "Clear now" }).click();
+  await expect(page.getByRole("button", { name: "Run call-over" })).toBeVisible();
+  await expect(page.getByText("Upload both files to run the call-over")).toBeVisible();
+  const stored = await page.evaluate(() => window.localStorage.getItem("daymark.callover.v2"));
+  expect(stored).toBeNull();
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Run call-over" })).toBeVisible();
+  await expect(page.getByText("Upload both files to run the call-over")).toBeVisible();
+});

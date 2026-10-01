@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { runCallOver, type CallOverResult } from "@/lib/callover";
+import { type CallOverResult } from "@/lib/callover";
+import { runCallOverAsync } from "@/lib/calloverClient";
 import { buildReportHtml, printReportHtml } from "@/lib/report";
 import { CalloverUploader, type CallOverData } from "@/components/CalloverUploader";
 import { CalloverResults } from "@/components/CalloverResults";
@@ -131,9 +132,11 @@ export function Callover() {
   const run = useCallback(() => {
     if (!data || running) return;
     setRunning(true);
-    // A beat of matching animation so short runs are still visible.
+    // A beat of matching animation so short runs are still visible. The
+    // matching itself runs in a Web Worker, so huge files never freeze the
+    // upload UI while it spins.
     const work = new Promise<CallOverResult>((resolve) => {
-      setTimeout(() => resolve(runCallOver(data.payments, data.statement)), 700);
+      setTimeout(() => void runCallOverAsync(data.payments, data.statement).then(resolve), 700);
     });
     work.then((r) => {
       setResult(r);

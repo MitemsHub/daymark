@@ -3,16 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import type { InvestmentSeries } from "@/data/investmentSeries";
 import type { MemberGrade } from "@/data/memberGrades";
-import { defaultGrades, defaultSeries, useEditableData } from "@/lib/dataStore";
+import type { CoopAccount } from "@/data/coopAccounts";
+import { defaultAccounts, defaultGrades, defaultSeries, useEditableData } from "@/lib/dataStore";
 import { StatusNote } from "@/components/ui";
 import { GradesEditor } from "@/components/GradesEditor";
 import { SeriesEditor } from "@/components/SeriesEditor";
+import { AccountsEditor } from "@/components/AccountsEditor";
 
-type Tab = "series" | "grades";
+type Tab = "series" | "grades" | "accounts";
 
 export function DataManager() {
   const series = useEditableData<InvestmentSeries>("series", defaultSeries);
   const grades = useEditableData<MemberGrade>("grades", defaultGrades);
+  const accounts = useEditableData<CoopAccount>("accounts", defaultAccounts);
   const [tab, setTab] = useState<Tab>("series");
   const [message, setMessage] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -23,13 +26,14 @@ export function DataManager() {
     return () => clearTimeout(t);
   }, [message]);
 
-  const isEdited = series.isEdited || grades.isEdited;
+  const isEdited = series.isEdited || grades.isEdited || accounts.isEdited;
 
   function exportJSON() {
     const payload = {
       exported: new Date().toISOString(),
       series: series.rows,
       grades: grades.rows,
+      accounts: accounts.rows,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -48,9 +52,11 @@ export function DataManager() {
         const parsed = JSON.parse(String(reader.result)) as {
           series?: InvestmentSeries[];
           grades?: MemberGrade[];
+          accounts?: CoopAccount[];
         };
         if (Array.isArray(parsed.series)) series.saveAll(parsed.series);
         if (Array.isArray(parsed.grades)) grades.saveAll(parsed.grades);
+        if (Array.isArray(parsed.accounts)) accounts.saveAll(parsed.accounts);
         setMessage("Backup imported.");
       } catch {
         setMessage("That file didn't look like a Daymark backup.");
@@ -62,6 +68,7 @@ export function DataManager() {
   function resetAll() {
     series.reset();
     grades.reset();
+    accounts.reset();
     setMessage("Reset to shipped defaults.");
   }
 
@@ -72,6 +79,7 @@ export function DataManager() {
           [
             ["series", `Investment series (${series.rows.length})`],
             ["grades", `Member grades (${grades.rows.length})`],
+            ["accounts", `Accounts (${accounts.rows.length})`],
           ] as const
         ).map(([value, label]) => (
           <button
@@ -90,11 +98,9 @@ export function DataManager() {
 
       {message && <StatusNote kind="info"><span className="swap-in inline-block">{message}</span></StatusNote>}
 
-      {tab === "series" ? (
-        <SeriesEditor rows={series.rows} onSave={series.saveAll} />
-      ) : (
-        <GradesEditor rows={grades.rows} onSave={grades.saveAll} />
-      )}
+      {tab === "series" && <SeriesEditor rows={series.rows} onSave={series.saveAll} />}
+      {tab === "grades" && <GradesEditor rows={grades.rows} onSave={grades.saveAll} />}
+      {tab === "accounts" && <AccountsEditor rows={accounts.rows} onSave={accounts.saveAll} />}
 
       <section aria-labelledby="backup-heading" className="border-t hairline pt-6">
         <h2 id="backup-heading" className="eyebrow mb-3">
