@@ -7,9 +7,11 @@ import { useCallback, useEffect, useState } from "react";
 import { investmentSeries as defaultSeries } from "@/data/investmentSeries";
 import { memberGrades as defaultGrades } from "@/data/memberGrades";
 import { coopAccounts as defaultAccounts } from "@/data/coopAccounts";
+import { loanRates as defaultLoanRates, bondRates as defaultBondRates } from "@/data/coopRates";
 import type { InvestmentSeries } from "@/data/investmentSeries";
 import type { MemberGrade } from "@/data/memberGrades";
 import type { CoopAccount } from "@/data/coopAccounts";
+import type { LoanRate, BondRate } from "@/data/coopRates";
 
 const KEY = "daymark.overrides.v1";
 
@@ -17,6 +19,8 @@ type Sections = {
   series?: unknown[];
   grades?: unknown[];
   accounts?: unknown[];
+  loanRates?: unknown[];
+  bondRates?: unknown[];
 };
 
 function readSections(): Sections {
@@ -25,7 +29,7 @@ function readSections(): Sections {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as Sections;
-    return { series: parsed.series, grades: parsed.grades, accounts: parsed.accounts };
+    return { series: parsed.series, grades: parsed.grades, accounts: parsed.accounts, loanRates: parsed.loanRates, bondRates: parsed.bondRates };
   } catch {
     return {};
   }
@@ -38,6 +42,8 @@ function writeSections(sections: Sections): void {
     if (sections.series) clean.series = sections.series;
     if (sections.grades) clean.grades = sections.grades;
     if (sections.accounts) clean.accounts = sections.accounts;
+    if (sections.loanRates) clean.loanRates = sections.loanRates;
+    if (sections.bondRates) clean.bondRates = sections.bondRates;
     window.localStorage.setItem(KEY, JSON.stringify(clean));
   } catch {
     // storage unavailable: edits stay in memory for this session only
@@ -52,7 +58,7 @@ export interface EditableData<T> {
 }
 
 export function useEditableData<T extends { id: string }>(
-  section: "series" | "grades" | "accounts",
+  section: "series" | "grades" | "accounts" | "loanRates" | "bondRates",
   defaults: T[],
 ): EditableData<T> {
   const [rows, setRows] = useState<T[]>(defaults);
@@ -88,4 +94,4 @@ export function useEditableData<T extends { id: string }>(
   return { rows, isEdited, saveAll, reset };
 }
 
-export { defaultSeries, defaultGrades, defaultAccounts };
+export { defaultSeries, defaultGrades, defaultAccounts, defaultLoanRates, defaultBondRates };

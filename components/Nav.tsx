@@ -8,7 +8,7 @@ const links = [
   { href: "/", label: "Calculator" },
   { href: "/week", label: "Week" },
   { href: "/callover", label: "Call Over" },
-  { href: "/investments", label: "Investments" },
+  { href: "/investments", label: "Rates" },
   { href: "/grades", label: "Member Grade" },
   { href: "/data", label: "Data" },
 ];

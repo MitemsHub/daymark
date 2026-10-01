@@ -4,18 +4,22 @@ import { useEffect, useRef, useState } from "react";
 import type { InvestmentSeries } from "@/data/investmentSeries";
 import type { MemberGrade } from "@/data/memberGrades";
 import type { CoopAccount } from "@/data/coopAccounts";
-import { defaultAccounts, defaultGrades, defaultSeries, useEditableData } from "@/lib/dataStore";
+import type { LoanRate, BondRate } from "@/data/coopRates";
+import { defaultAccounts, defaultGrades, defaultSeries, useEditableData, defaultLoanRates, defaultBondRates } from "@/lib/dataStore";
 import { StatusNote } from "@/components/ui";
 import { GradesEditor } from "@/components/GradesEditor";
 import { SeriesEditor } from "@/components/SeriesEditor";
 import { AccountsEditor } from "@/components/AccountsEditor";
+import { RatesEditor } from "@/components/RatesEditor";
 
-type Tab = "series" | "grades" | "accounts";
+type Tab = "series" | "grades" | "accounts" | "rates";
 
 export function DataManager() {
   const series = useEditableData<InvestmentSeries>("series", defaultSeries);
   const grades = useEditableData<MemberGrade>("grades", defaultGrades);
   const accounts = useEditableData<CoopAccount>("accounts", defaultAccounts);
+  const loans = useEditableData<LoanRate>("loanRates", defaultLoanRates);
+  const bonds = useEditableData<BondRate>("bondRates", defaultBondRates);
   const [tab, setTab] = useState<Tab>("series");
   const [message, setMessage] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -26,7 +30,7 @@ export function DataManager() {
     return () => clearTimeout(t);
   }, [message]);
 
-  const isEdited = series.isEdited || grades.isEdited || accounts.isEdited;
+  const isEdited = series.isEdited || grades.isEdited || accounts.isEdited || loans.isEdited || bonds.isEdited;
 
   function exportJSON() {
     const payload = {
@@ -34,6 +38,8 @@ export function DataManager() {
       series: series.rows,
       grades: grades.rows,
       accounts: accounts.rows,
+      loanRates: loans.rows,
+      bondRates: bonds.rows,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -53,10 +59,14 @@ export function DataManager() {
           series?: InvestmentSeries[];
           grades?: MemberGrade[];
           accounts?: CoopAccount[];
+          loanRates?: LoanRate[];
+          bondRates?: BondRate[];
         };
         if (Array.isArray(parsed.series)) series.saveAll(parsed.series);
         if (Array.isArray(parsed.grades)) grades.saveAll(parsed.grades);
         if (Array.isArray(parsed.accounts)) accounts.saveAll(parsed.accounts);
+        if (Array.isArray(parsed.loanRates)) loans.saveAll(parsed.loanRates);
+        if (Array.isArray(parsed.bondRates)) bonds.saveAll(parsed.bondRates);
         setMessage("Backup imported.");
       } catch {
         setMessage("That file didn't look like a Daymark backup.");
@@ -69,6 +79,8 @@ export function DataManager() {
     series.reset();
     grades.reset();
     accounts.reset();
+    loans.reset();
+    bonds.reset();
     setMessage("Reset to shipped defaults.");
   }
 
@@ -80,6 +92,7 @@ export function DataManager() {
             ["series", `Investment series (${series.rows.length})`],
             ["grades", `Member grades (${grades.rows.length})`],
             ["accounts", `Accounts (${accounts.rows.length})`],
+            ["rates", `Loan & bond rates (${loans.rows.length + bonds.rows.length})`],
           ] as const
         ).map(([value, label]) => (
           <button
@@ -101,6 +114,22 @@ export function DataManager() {
       {tab === "series" && <SeriesEditor rows={series.rows} onSave={series.saveAll} />}
       {tab === "grades" && <GradesEditor rows={grades.rows} onSave={grades.saveAll} />}
       {tab === "accounts" && <AccountsEditor rows={accounts.rows} onSave={accounts.saveAll} />}
+      {tab === "rates" && (
+        <div className="space-y-8">
+          <section aria-labelledby="loan-rates-edit-heading">
+            <h2 id="loan-rates-edit-heading" className="eyebrow mb-3">
+              Loan rates
+            </h2>
+            <RatesEditor rows={loans.rows} onSave={loans.saveAll} kind="loan" />
+          </section>
+          <section aria-labelledby="bond-rates-edit-heading">
+            <h2 id="bond-rates-edit-heading" className="eyebrow mb-3">
+              Investment bond rates
+            </h2>
+            <RatesEditor rows={bonds.rows} onSave={bonds.saveAll} kind="bond" />
+          </section>
+        </div>
+      )}
 
       <section aria-labelledby="backup-heading" className="border-t hairline pt-6">
         <h2 id="backup-heading" className="eyebrow mb-3">
