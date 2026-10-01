@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEditableData, defaultAccounts } from "@/lib/dataStore";
 import type { CoopAccount } from "@/data/coopAccounts";
 
@@ -35,11 +34,6 @@ export function AccountsWidget() {
           ))}
         </tbody>
       </table>
-      <p className="text-xs text-ink-faint mt-2">
-        <Link href="/data" className="underline underline-offset-2 hover:text-stamp">
-          Edit on the Data page
-        </Link>
-      </p>
     </div>
   );
 }
