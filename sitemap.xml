@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url>
+<loc>https://mitemshub.github.io/daymark</loc>
+<lastmod>2026-10-02T09:45:57.249Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>1</priority>
+</url>
+<url>
+<loc>https://mitemshub.github.io/daymark/week</loc>
+<lastmod>2026-10-02T09:45:57.249Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.7</priority>
+</url>
+<url>
+<loc>https://mitemshub.github.io/daymark/callover</loc>
+<lastmod>2026-10-02T09:45:57.249Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.7</priority>
+</url>
+<url>
+<loc>https://mitemshub.github.io/daymark/investments</loc>
+<lastmod>2026-10-02T09:45:57.249Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.7</priority>
+</url>
+<url>
+<loc>https://mitemshub.github.io/daymark/grades</loc>
+<lastmod>2026-10-02T09:45:57.249Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.7</priority>
+</url>
+</urlset>
