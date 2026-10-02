@@ -4,7 +4,7 @@ import { ReverseCalculator } from "@/components/ReverseCalculator";
 import { AccountsWidget } from "@/components/AccountsWidget";
 
 export const metadata: Metadata = {
-  title: "Date & Week Calculator",
+  title: "Date Calculator",
   description:
     "+ Today and − Today day counts, weeks and months between two dates, with the year's descending week countdown alongside.",
 };
@@ -13,7 +13,7 @@ export default function HomePage() {
   return (
     <div className="space-y-14">
       <header className="max-w-2xl reveal">
-        <h1 className="display text-4xl sm:text-5xl mb-3">Date &amp; Week Calculator</h1>
+        <h1 className="display text-4xl sm:text-5xl mb-3">Date Calculator</h1>
         <p className="text-ink-soft text-lg">
           Calculate dates, durations and weeks instantly.
         </p>

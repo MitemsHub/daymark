@@ -29,7 +29,7 @@ concurrency:
 env:
   SITE_URL: https://mitemshub.github.io/daymark
   # Update this when the app title changes; it is the takeover signal.
-  EXPECTED_TITLE: "Date &amp; Week Calculator"
+  EXPECTED_TITLE: "<title>Date Calculator</title>"
 
 jobs:
   check:

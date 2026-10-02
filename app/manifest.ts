@@ -10,7 +10,7 @@ const root = base ? `${base}/` : "/";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Daymark: Date & Week Calculator + Co-op Reference",
+    name: "Daymark: Date Calculator + Co-op Reference",
     short_name: "Daymark",
     description:
       "+ Today and − Today day counts, a descending week countdown that matches the printed wall calendar, and private reference tables for investment series and member grades.",
