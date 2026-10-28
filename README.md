@@ -134,6 +134,10 @@ is checked against the statement:
   **Not found** means the statement never saw the reference.
 - Each payment shows its raw mention count in brackets, in the same
   "Found N times" form as the Excel process this replaces.
+- **Payments Uploaded, Not in Statement** has its own section: a payment the
+  statement never saw is listed there with its detail rows open by default,
+  not buried in the failed payments table. The failed table keeps the
+  payments that did move on the statement. Both sections print on their own.
 - Matching follows the call-over reference rule: ZB/A/006570/5 matches
   ZBA0065705 but never ZBA00657050, on any bank's statement.
 - The charge threshold (default 10,000 naira) teaches the tool that larger

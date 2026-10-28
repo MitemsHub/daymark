@@ -156,14 +156,25 @@ export function CalloverResults({
   const [query, setQuery] = useState("");
   // Which section a single-table print is targeting, or null for the full
   // report. While set, print CSS hides every other part of the app.
-  const [printSection, setPrintSection] = useState<"problems" | "orphans" | "paid" | null>(null);
+  const [printSection, setPrintSection] = useState<"missing" | "problems" | "orphans" | "paid" | null>(null);
 
   const { verdicts, unexplainedDebits, totals } = result;
+
+  // A payment the statement never saw gets its own section: it is the one
+  // outcome a paid/failed split cannot explain, and it hides in a mixed
+  // table otherwise.
+  const notInStatement = useMemo(() => {
+    const q = query.trim().toUpperCase();
+    return verdicts
+      .filter((v) => v.status === "Not found")
+      .filter((v) => !q || v.payment.ref.toUpperCase().includes(q) || v.payment.beneficiary.toUpperCase().includes(q))
+      .sort((a, b) => a.payment.id - b.payment.id);
+  }, [verdicts, query]);
 
   const problems = useMemo(() => {
     const q = query.trim().toUpperCase();
     return verdicts
-      .filter((v) => v.status !== "Paid")
+      .filter((v) => v.status !== "Paid" && v.status !== "Not found")
       .filter((v) => !q || v.payment.ref.toUpperCase().includes(q) || v.payment.beneficiary.toUpperCase().includes(q))
       .sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) || a.payment.id - b.payment.id);
   }, [verdicts, query]);
@@ -181,7 +192,7 @@ export function CalloverResults({
    * Print one section alone: tag the body and the root, let print CSS hide
    * everything else, then clean up when the dialog closes.
    */
-  function printSingle(section: "problems" | "orphans" | "paid") {
+  function printSingle(section: "missing" | "problems" | "orphans" | "paid") {
     setPrintSection(section);
     // Let the re-render land before the print snapshot is taken.
     setTimeout(() => {
@@ -249,10 +260,48 @@ export function CalloverResults({
         <Tile label="Reversed" value={totals.reversed + totals.partialReversal} tone="text-stamp" />
         <Tile label="Double posted" value={totals.doublePosted} tone="text-stamp" />
         <Tile label="Short paid" value={totals.shortPaid} tone="text-ink" />
-        <Tile label="Not found" value={totals.notFound} tone="text-stamp" />
+        <Tile label="Not in statement" value={totals.notFound} tone="text-stamp" />
       </div>
 
-      {/* Order: problems first, then orphans, then successful payments */}
+      {/* Order: missing payments first, then problems, then orphans */}
+      <section aria-labelledby="missing-heading" data-area="missing" className="mb-6">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <h3 id="missing-heading" className="eyebrow">
+            Payments Uploaded, Not in Statement ({notInStatement.length})
+          </h3>
+          <button
+            type="button"
+            onClick={() => printSingle("missing")}
+            className="print:hidden text-sm text-ink-soft hover:text-stamp transition-colors shrink-0 py-1 -my-1"
+            aria-label="Print only the Payments Uploaded, Not in Statement table"
+          >
+            Print
+          </button>
+        </div>
+        {notInStatement.length === 0 ? (
+          <p className="text-sm text-leaf">Every payment uploaded was seen in the Statement, Thank you.!</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="ledger">
+              <caption className="sr-only">Payments uploaded whose reference never appears on the statement</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Reference</th>
+                  <th scope="col">Name</th>
+                  <th scope="col" className="!text-right">Amount</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {notInStatement.map((v) => (
+                  <VerdictRow key={v.payment.id} v={v} defaultOpen />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
       <section aria-labelledby="problems-heading" data-area="problems" className="mb-6">
         <div className="flex items-center justify-between gap-3 mb-2">
           <h3 id="problems-heading" className="eyebrow">
@@ -268,7 +317,11 @@ export function CalloverResults({
           </button>
         </div>
         {problems.length === 0 ? (
-          <p className="text-sm text-leaf">Every payment uploaded was seen in the Statement, Thank you.!</p>
+          <p className="text-sm text-leaf">
+            {notInStatement.length === 0
+              ? "Every payment uploaded was seen in the Statement, Thank you.!"
+              : "No reversed, double posted or short paid payments."}
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="ledger">

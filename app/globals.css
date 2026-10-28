@@ -497,6 +497,7 @@ table.ledger {
   body.print-one [data-results-root] > * {
     display: none !important;
   }
+  body.print-one [data-results-root][data-print-section="missing"] > [data-area="missing"],
   body.print-one [data-results-root][data-print-section="problems"] > [data-area="problems"],
   body.print-one [data-results-root][data-print-section="orphans"] > [data-area="orphans"],
   body.print-one [data-results-root][data-print-section="paid"] > [data-area="paid"] {

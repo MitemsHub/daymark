@@ -22,7 +22,7 @@ function naira(n: number): string {
   return n.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-/** The whole report: header, summary, unexplained debits, problems, clean list. */
+/** The whole report: header, summary, missing payments, unexplained debits, problems, clean list. */
 export function buildReportHtml(result: CallOverResult, meta: ReportMeta): string {
   const { verdicts, unexplainedDebits, totals } = result;
   const run = meta.runDate.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
@@ -30,8 +30,11 @@ export function buildReportHtml(result: CallOverResult, meta: ReportMeta): strin
   const order = ["Double posted", "Partial reversal", "Reversed", "Short paid", "Not found", "Paid"];
   const rank = (s: string) => order.indexOf(s);
   const problems = verdicts
-    .filter((v) => v.status !== "Paid")
+    .filter((v) => v.status !== "Paid" && v.status !== "Not found")
     .sort((a, b) => rank(a.status) - rank(b.status) || a.payment.id - b.payment.id);
+  const notInStatement = verdicts
+    .filter((v) => v.status === "Not found")
+    .sort((a, b) => a.payment.id - b.payment.id);
   const paid = verdicts.filter((v) => v.status === "Paid");
 
   const stamp = "#8f3813";
@@ -49,7 +52,7 @@ export function buildReportHtml(result: CallOverResult, meta: ReportMeta): strin
     ["Reversed", totals.reversed + totals.partialReversal],
     ["Double posted", totals.doublePosted],
     ["Short paid", totals.shortPaid],
-    ["Not found", totals.notFound],
+    ["Not in statement", totals.notFound],
   ]
     .map(
       ([l, v]) =>
@@ -83,17 +86,35 @@ export function buildReportHtml(result: CallOverResult, meta: ReportMeta): strin
       .join("")}</tbody>
   </table>`;
 
-  const problemsHtml =
-    problems.length === 0
+  const missingHtml = `<h2 style="font-size:10pt;letter-spacing:0.08em;color:${ink};margin:16px 0 4px">PAYMENTS UPLOADED, NOT IN STATEMENT (${notInStatement.length})</h2>
+  ${
+    notInStatement.length === 0
       ? `<p style="font-size:10pt;color:${ink}">Every payment uploaded was seen in the Statement, Thank you.!</p>`
       : `<table style="width:100%;border-collapse:collapse">
     <thead><tr><th style="${th}">REFERENCE</th><th style="${th}">NAME</th><th style="${th + ";" + num}">AMOUNT</th><th style="${th}">STATUS</th></tr></thead>
+    <tbody>${notInStatement
+      .map(
+        (v) => `<tr><td style="${td};font-variant-numeric:tabular-nums">${esc(v.payment.ref)}</td><td style="${td}">${esc(v.payment.beneficiary)}</td><td style="${td + ";" + num}">${naira(v.payment.amount)}</td><td style="${td};color:${faint};font-weight:600">${esc(v.status)} (Found ${v.foundCount} ${v.foundCount === 1 ? "time" : "times"})</td></tr>
+      <tr><td></td><td colspan="3" style="padding:0 6px">${v.note ? `<div style="font-size:8pt;color:${faint};padding:2px 0">${esc(v.note)}</div>` : ""}${v.probable ? `<div style="font-size:8pt;color:${faint};padding:2px 0">Probable match: line ${v.probable.lineId} ${esc(v.probable.narration)} ${esc(v.probable.reason)}</div>` : ""}${evidence(v)}</td></tr>`,
+      )
+      .join("")}</tbody>
+  </table>`
+  }`;
+
+  const problemsHtml =
+    problems.length === 0
+      ? `<p style="font-size:10pt;color:${ink}">${
+          notInStatement.length === 0
+            ? "Every payment uploaded was seen in the Statement, Thank you.!"
+            : "No reversed, double posted or short paid payments."
+        }</p>`
+      : `<table style="width:100%;border-collapse:collapse">
+    <thead><tr><th style="${th}">REFERENCE</th><th style="${th}">NAME</th><th style="${th + ";" + num}">AMOUNT</th><th style="${th}">STATUS</th></tr></thead>
     <tbody>${problems
-      .map((v) => {
-        const tone = v.status === "Not found" ? faint : stamp;
-        return `<tr><td style="${td};font-variant-numeric:tabular-nums">${esc(v.payment.ref)}</td><td style="${td}">${esc(v.payment.beneficiary)}</td><td style="${td + ";" + num}">${naira(v.payment.amount)}</td><td style="${td};color:${tone};font-weight:600">${esc(v.status)} (Found ${v.foundCount} ${v.foundCount === 1 ? "time" : "times"})</td></tr>
-      <tr><td></td><td colspan="3" style="padding:0 6px">${v.note ? `<div style="font-size:8pt;color:${faint};padding:2px 0">${esc(v.note)}</div>` : ""}${evidence(v)}</td></tr>`;
-      })
+      .map(
+        (v) => `<tr><td style="${td};font-variant-numeric:tabular-nums">${esc(v.payment.ref)}</td><td style="${td}">${esc(v.payment.beneficiary)}</td><td style="${td + ";" + num}">${naira(v.payment.amount)}</td><td style="${td};color:${stamp};font-weight:600">${esc(v.status)} (Found ${v.foundCount} ${v.foundCount === 1 ? "time" : "times"})</td></tr>
+      <tr><td></td><td colspan="3" style="padding:0 6px">${v.note ? `<div style="font-size:8pt;color:${faint};padding:2px 0">${esc(v.note)}</div>` : ""}${evidence(v)}</td></tr>`,
+      )
       .join("")}</tbody>
   </table>`;
 
@@ -135,6 +156,8 @@ export function buildReportHtml(result: CallOverResult, meta: ReportMeta): strin
   </div>
 
   <div style="display:flex;gap:8px;margin:12px 0 4px;flex-wrap:wrap">${summary}</div>
+
+  ${missingHtml}
 
   ${orphans}
 

@@ -37,7 +37,7 @@ async function upload(page: Page, statements: string[], payments: string[]) {
 
 async function runCallOver(page: Page) {
   await page.getByRole("button", { name: "Run call-over" }).click();
-  await expect(page.getByRole("heading", { name: /Please Upload this Payments|Payments that Failed\/Invalid|Successful payments/ }).first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: /Please Upload this Payments|Payments that Failed\/Invalid|Payments Uploaded, Not in Statement|Successful payments/ }).first()).toBeVisible({ timeout: 20_000 });
 }
 
 test("smoke: statuses, tiles and headings from fixture CSVs", async ({ page }) => {
@@ -122,13 +122,15 @@ test("smoke: GAPS vendor payment exports parse and run against a GT statement", 
 
   await runCallOver(page);
 
-  // No payment error, no silent drop: all four classify.
+  // No payment error, no silent drop: all four classify, and none of them
+  // appears on the statement, so the missing-payment section owns them all.
   await expect(page.getByText(/no sheet looked like a payment list/)).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Payments that Failed/Invalid (4)" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Payments Uploaded, Not in Statement (4)" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Payments that Failed\/Invalid (0)" })).toBeVisible();
   await expect(page.getByRole("button", { name: /GTB\/A\/008848\/1 .*Not found/ })).toBeVisible();
 
-  // The Giwa payment gets a probable match on the real transport debit.
-  await page.getByRole("button", { name: /GTB\/A\/008848\/1 .*Not found/ }).click();
+  // The Giwa payment gets a probable match on the real transport debit,
+  // and its row is open by default so the evidence shows without a tap.
   await expect(page.getByText(/Probable match:/)).toBeVisible();
   await expect(page.getByText(/GIWA SIDIKAT ABIKE/i).first()).toBeVisible();
 });

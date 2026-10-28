@@ -2,7 +2,16 @@
 
 ## Unreleased
 
-Nothing yet.
+### Call Over
+
+- Payments uploaded but absent from the statement now have their own
+  section, Payments Uploaded, Not in Statement, with each row open so the
+  "No statement line carries this reference" evidence shows without a tap.
+  They used to sit mixed into the Failed/Invalid table, which kept the
+  payments that did move: reversed, partial reversal, double posted and
+  short paid. The summary tile reads Not in statement, and the printable
+  report carries the same split, with a single-table print button on the new
+  section.
 
 ## 1.1.0 (30 September 2026)
 
