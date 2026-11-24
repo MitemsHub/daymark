@@ -22,6 +22,12 @@
   report carries the same split, with a single-table print button on the new
   section.
 
+### Platform
+
+- A client-side exception now shows a short Something went wrong screen
+  with a Reload the page button, inside the normal layout, instead of
+  Next's bare "Application error" page. Normal rendering is unchanged.
+
 ## 1.1.0 (30 September 2026)
 
 ### Call Over
