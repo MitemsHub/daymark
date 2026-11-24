@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Week
+
+- The date lookup no longer takes the page down while a date is still being
+  typed. Half-typed input such as 31/12/202 briefly read as the year 202,
+  which is not a date the week maths can use, so the lookup threw and the
+  whole app showed Next's "Application error" screen. Three-digit years are
+  now ignored until the fourth digit lands, and an unreadable date simply
+  shows no result.
+
 ### Call Over
 
 - Payments uploaded but absent from the statement now have their own

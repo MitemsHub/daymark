@@ -22,15 +22,21 @@ export function WeekLookup() {
   const date = dateISO ? new Date(dateISO + "T12:00:00") : null;
 
   const byDate = useMemo(() => {
-    if (!date) return null;
-    const w = getWeekForDate(date);
-    const range = getWeekDateRange(date);
-    return {
-      week: w,
-      start: range.start,
-      end: range.end,
-      daysRemaining: daysRemainingInWeek(date),
-    };
+    // An unreadable date shows no result. Letting one through would throw
+    // during render and take the whole page down with it.
+    if (!date || Number.isNaN(date.getTime())) return null;
+    try {
+      const w = getWeekForDate(date);
+      const range = getWeekDateRange(date);
+      return {
+        week: w,
+        start: range.start,
+        end: range.end,
+        daysRemaining: daysRemainingInWeek(date),
+      };
+    } catch {
+      return null;
+    }
   }, [dateISO]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [year, setYear] = useState(today?.getFullYear() ?? 2026);

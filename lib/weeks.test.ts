@@ -149,6 +149,13 @@ describe("getWeekByDescendingNumber", () => {
   });
 });
 
+describe("invalid dates", () => {
+  it("throw instead of yielding NaN week numbers", () => {
+    expect(() => getWeekForDate(new Date("202-12-31T12:00:00"))).toThrow(/Invalid date/);
+    expect(() => getWeekDateRange(new Date(NaN))).toThrow(/Invalid date/);
+  });
+});
+
 describe("getWeekDateRange / daysRemainingInWeek", () => {
   it("Tue Sep 29 2026 → 5 (Wed–Sun, today excluded)", () => {
     expect(daysRemainingInWeek(d("2026-09-29"))).toBe(5);

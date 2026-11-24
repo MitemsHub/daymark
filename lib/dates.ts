@@ -71,7 +71,10 @@ export function formatDmy(iso: string): string {
  */
 export function parseDmy(raw: string): string | null {
   const s = raw.trim();
-  const m = /^(\d{1,2})[./\- ](\d{1,2})[./\- ](\d{2,4})$/.exec(s);
+  // Years are two or four digits. A three-digit year ("31/12/202") is what
+  // the field holds halfway through typing 2026; accepting it would build
+  // "202-12-31", which Date cannot parse, so wait for the fourth digit.
+  const m = /^(\d{1,2})[./\- ](\d{1,2})[./\- ](\d{2}|\d{4})$/.exec(s);
   if (!m) return null;
   const d = Number(m[1]);
   const mo = Number(m[2]);

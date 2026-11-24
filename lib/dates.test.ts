@@ -194,4 +194,11 @@ describe("dd/mm/yyyy helpers", () => {
     expect(parseDmy("2026-10-01")).toBeNull(); // not day-first
     expect(parseDmy("hello")).toBeNull();
   });
+
+  it("rejects a three-digit year, which is what half-typed input holds", () => {
+    // Typing 31/12/2026 passes through "31/12/202"; it must not commit.
+    expect(parseDmy("31/12/202")).toBeNull();
+    expect(parseDmy("01/01/202")).toBeNull();
+    expect(parseDmy("31/12/2026")).toBe("2026-12-31");
+  });
 });

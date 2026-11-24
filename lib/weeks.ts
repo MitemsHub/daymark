@@ -81,6 +81,12 @@ export function firstSundayOfYear(year: number): Date {
 
 /** Calendar week (1–53) containing `date`, per the wall-calendar convention. */
 export function getWeekForDate(date: Date): WeekRef {
+  // Fail loudly instead of returning NaN week numbers that only blow up
+  // later inside the range maths.
+  if (Number.isNaN(date.getTime())) {
+    throw new RangeError(`Invalid date: ${String(date)}`);
+  }
+
   const year = date.getFullYear();
   const fs = dayOfYear(firstSundayOfYear(year)); // 1..7
   const doy = dayOfYear(date);
